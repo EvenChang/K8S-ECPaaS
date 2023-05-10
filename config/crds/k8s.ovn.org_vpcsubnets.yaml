@@ -16,7 +16,11 @@ spec:
     singular: vpcsubnet
   scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - jsonPath: .status
+      name: status
+      type: string
+    name: v1
     schema:
       openAPIV3Schema:
         description: VPCSubnet is the Schema for the vpcsubnets API
@@ -46,6 +50,8 @@ spec:
             - cidr
             - vpc
             type: object
+          status:
+            type: string
         type: object
     served: true
     storage: true

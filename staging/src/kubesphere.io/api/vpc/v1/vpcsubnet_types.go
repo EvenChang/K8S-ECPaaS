@@ -29,12 +29,14 @@ type VPCSubnetSpec struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +k8s:openapi-gen=true
+// +kubebuilder:printcolumn:name="status",type=string,JSONPath=".status"
 // VPCSubnet is the Schema for the vpcsubnets API
 type VPCSubnet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec VPCSubnetSpec `json:"spec,omitempty"`
+	Spec   VPCSubnetSpec `json:"spec,omitempty"`
+	Status string        `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -102,6 +102,18 @@ func (c *FakeVPCSubnets) Update(ctx context.Context, vPCSubnet *vpcv1.VPCSubnet,
 	return obj.(*vpcv1.VPCSubnet), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeVPCSubnets) UpdateStatus(ctx context.Context, vPCSubnet *vpcv1.VPCSubnet, opts v1.UpdateOptions) (*vpcv1.VPCSubnet, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(vpcsubnetsResource, "status", c.ns, vPCSubnet), &vpcv1.VPCSubnet{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*vpcv1.VPCSubnet), err
+}
+
 // Delete takes name of the vPCSubnet and deletes it. Returns an error if one occurs.
 func (c *FakeVPCSubnets) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.

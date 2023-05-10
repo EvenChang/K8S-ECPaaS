@@ -33,14 +33,18 @@ type VPCNetworkStatus struct {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +genclient:nonNamespaced
-
-// Workspace is the Schema for the workspaces API
 // +k8s:openapi-gen=true
+// +kubebuilder:printcolumn:name="SUBNETS",type=string,JSONPath=".status.subnets"
+// +kubebuilder:printcolumn:name="TransitSwitch Port",type=string,JSONPath=".status.tsPort"
+// +kubebuilder:printcolumn:name="TransitSwitch Network",type=string,JSONPath=".status.tsNetwork"
 // +kubebuilder:resource:scope=Cluster, shortName=vnet
+// A vpc network has a set of independent virtual k8s network topology.
+// In this set of virtual k8s network, users add namespaces to the virtual k8s network by creating subnets.
+// Its behavior is like adding new k8s nodes in the real k8s network is also called default vpc.
 type VPCNetwork struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              VPCNetworkSpec   `json:"spec,omitempty"`
+	Spec              VPCNetworkSpec   `json:"spec"`
 	Status            VPCNetworkStatus `json:"status,omitempty"`
 }
 
