@@ -36,7 +36,7 @@ type VPCNetworkStatus struct {
 
 // Workspace is the Schema for the workspaces API
 // +k8s:openapi-gen=true
-// +kubebuilder:resource:categories="tenant",scope="Cluster"
+// +kubebuilder:resource:scope=Cluster, shortName=vnet
 type VPCNetwork struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

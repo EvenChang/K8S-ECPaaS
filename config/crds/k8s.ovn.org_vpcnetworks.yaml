@@ -10,11 +10,11 @@ metadata:
 spec:
   group: k8s.ovn.org
   names:
-    categories:
-    - tenant
     kind: VPCNetwork
     listKind: VPCNetworkList
     plural: vpcnetworks
+    shortNames:
+    - vnet
     singular: vpcnetwork
   scope: Cluster
   versions:
