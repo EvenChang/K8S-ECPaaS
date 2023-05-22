@@ -39,6 +39,7 @@ import (
 	tenantv1alpha1 "kubesphere.io/kubesphere/pkg/client/clientset/versioned/typed/tenant/v1alpha1"
 	tenantv1alpha2 "kubesphere.io/kubesphere/pkg/client/clientset/versioned/typed/tenant/v1alpha2"
 	typesv1beta1 "kubesphere.io/kubesphere/pkg/client/clientset/versioned/typed/types/v1beta1"
+	k8sv1 "kubesphere.io/kubesphere/pkg/client/clientset/versioned/typed/vpc/v1"
 )
 
 type Interface interface {
@@ -58,6 +59,7 @@ type Interface interface {
 	TenantV1alpha1() tenantv1alpha1.TenantV1alpha1Interface
 	TenantV1alpha2() tenantv1alpha2.TenantV1alpha2Interface
 	TypesV1beta1() typesv1beta1.TypesV1beta1Interface
+	K8sV1() k8sv1.K8sV1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -79,6 +81,7 @@ type Clientset struct {
 	tenantV1alpha1      *tenantv1alpha1.TenantV1alpha1Client
 	tenantV1alpha2      *tenantv1alpha2.TenantV1alpha2Client
 	typesV1beta1        *typesv1beta1.TypesV1beta1Client
+	k8sV1               *k8sv1.K8sV1Client
 }
 
 // ApplicationV1alpha1 retrieves the ApplicationV1alpha1Client
@@ -154,6 +157,11 @@ func (c *Clientset) TenantV1alpha2() tenantv1alpha2.TenantV1alpha2Interface {
 // TypesV1beta1 retrieves the TypesV1beta1Client
 func (c *Clientset) TypesV1beta1() typesv1beta1.TypesV1beta1Interface {
 	return c.typesV1beta1
+}
+
+// K8sV1 retrieves the K8sV1Client
+func (c *Clientset) K8sV1() k8sv1.K8sV1Interface {
+	return c.k8sV1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -237,6 +245,10 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
+	cs.k8sV1, err = k8sv1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfig(&configShallowCopy)
 	if err != nil {
@@ -264,6 +276,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 	cs.tenantV1alpha1 = tenantv1alpha1.NewForConfigOrDie(c)
 	cs.tenantV1alpha2 = tenantv1alpha2.NewForConfigOrDie(c)
 	cs.typesV1beta1 = typesv1beta1.NewForConfigOrDie(c)
+	cs.k8sV1 = k8sv1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -287,6 +300,7 @@ func New(c rest.Interface) *Clientset {
 	cs.tenantV1alpha1 = tenantv1alpha1.New(c)
 	cs.tenantV1alpha2 = tenantv1alpha2.New(c)
 	cs.typesV1beta1 = typesv1beta1.New(c)
+	cs.k8sV1 = k8sv1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

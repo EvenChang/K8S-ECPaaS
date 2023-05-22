@@ -38,6 +38,7 @@ import (
 	tenantv1alpha1 "kubesphere.io/api/tenant/v1alpha1"
 	tenantv1alpha2 "kubesphere.io/api/tenant/v1alpha2"
 	v1beta1 "kubesphere.io/api/types/v1beta1"
+	v1 "kubesphere.io/api/vpc/v1"
 )
 
 // GenericInformer is type of SharedIndexInformer which will locate and delegate to other
@@ -127,6 +128,12 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Iam().V1alpha2().WorkspaceRoles().Informer()}, nil
 	case v1alpha2.SchemeGroupVersion.WithResource("workspacerolebindings"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Iam().V1alpha2().WorkspaceRoleBindings().Informer()}, nil
+
+		// Group=k8s.ovn.org, Version=v1
+	case v1.SchemeGroupVersion.WithResource("vpcnetworks"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.K8s().V1().VPCNetworks().Informer()}, nil
+	case v1.SchemeGroupVersion.WithResource("vpcsubnets"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.K8s().V1().VPCSubnets().Informer()}, nil
 
 		// Group=network.kubesphere.io, Version=v1alpha1
 	case networkv1alpha1.SchemeGroupVersion.WithResource("ipamblocks"):
