@@ -1,0 +1,899 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: ""
+  creationTimestamp: null
+  name: virtualmachines.virtualization.ecpaas.io
+spec:
+  group: virtualization.ecpaas.io
+  names:
+    kind: VirtualMachine
+    listKind: VirtualMachineList
+    plural: virtualmachines
+    shortNames:
+    - ksvm
+    - ksvms
+    singular: virtualmachine
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: VirtualMachine runs a vm at a given name.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VirtualMachineSpec defines the desired state of VirtualMachine
+            properties:
+              diskVolumeTemplates:
+                description: DiskVolumeTemplate is the name of the DiskVolumeTemplate.
+                items:
+                  properties:
+                    metadata:
+                      type: object
+                    spec:
+                      description: DiskVolumeSpec is the spec for a DiskVolume resource
+                      properties:
+                        resources:
+                          description: Resources represents the minimum resources
+                            the volume should have.
+                          properties:
+                            limits:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: Limits describes the maximum amount of
+                                compute resources allowed. Valid resource keys are
+                                "memory" and "cpu".
+                              type: object
+                            requests:
+                              additionalProperties:
+                                anyOf:
+                                - type: integer
+                                - type: string
+                                pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                x-kubernetes-int-or-string: true
+                              description: Requests is a description of the initial
+                                vmi resources. Valid resource keys are "memory" and
+                                "cpu".
+                              type: object
+                          type: object
+                        source:
+                          properties:
+                            image:
+                              properties:
+                                name:
+                                  type: string
+                                namespace:
+                                  type: string
+                              type: object
+                          type: object
+                      type: object
+                    status:
+                      type: object
+                  type: object
+                type: array
+              diskVolumes:
+                description: DiskVolume is the name of the DiskVolume.
+                items:
+                  type: string
+                type: array
+              hardware:
+                description: Hardware is the hardware of the VirtualMachine.
+                properties:
+                  domain:
+                    properties:
+                      cpu:
+                        properties:
+                          cores:
+                            format: int32
+                            type: integer
+                        type: object
+                      devices:
+                        properties:
+                          interfaces:
+                            items:
+                              properties:
+                                macvtap:
+                                  type: object
+                                name:
+                                  type: string
+                              type: object
+                            type: array
+                        type: object
+                      resources:
+                        properties:
+                          limits:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: Limits describes the maximum amount of compute
+                              resources allowed. Valid resource keys are "memory"
+                              and "cpu".
+                            type: object
+                          requests:
+                            additionalProperties:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            description: Requests is a description of the initial
+                              vmi resources. Valid resource keys are "memory" and
+                              "cpu".
+                            type: object
+                        type: object
+                    type: object
+                  evictionStrategy:
+                    type: string
+                  hostname:
+                    type: string
+                  networks:
+                    items:
+                      properties:
+                        multus:
+                          properties:
+                            networkName:
+                              type: string
+                          type: object
+                        name:
+                          type: string
+                      type: object
+                    type: array
+                  volumes:
+                    items:
+                      description: Volume represents a named volume in a vmi.
+                      properties:
+                        cloudInitConfigDrive:
+                          description: 'CloudInitConfigDrive represents a cloud-init
+                            Config Drive user-data source. The Config Drive data will
+                            be added as a disk to the vmi. A proper cloud-init installation
+                            is required inside the guest. More info: https://cloudinit.readthedocs.io/en/latest/topics/datasources/configdrive.html'
+                          properties:
+                            networkData:
+                              description: NetworkData contains config drive inline
+                                cloud-init networkdata.
+                              type: string
+                            networkDataBase64:
+                              description: NetworkDataBase64 contains config drive
+                                cloud-init networkdata as a base64 encoded string.
+                              type: string
+                            networkDataSecretRef:
+                              description: NetworkDataSecretRef references a k8s secret
+                                that contains config drive networkdata.
+                              properties:
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    TODO: Add other useful fields. apiVersion, kind,
+                                    uid?'
+                                  type: string
+                              type: object
+                            secretRef:
+                              description: UserDataSecretRef references a k8s secret
+                                that contains config drive userdata.
+                              properties:
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    TODO: Add other useful fields. apiVersion, kind,
+                                    uid?'
+                                  type: string
+                              type: object
+                            userData:
+                              description: UserData contains config drive inline cloud-init
+                                userdata.
+                              type: string
+                            userDataBase64:
+                              description: UserDataBase64 contains config drive cloud-init
+                                userdata as a base64 encoded string.
+                              type: string
+                          type: object
+                        cloudInitNoCloud:
+                          description: 'CloudInitNoCloud represents a cloud-init NoCloud
+                            user-data source. The NoCloud data will be added as a
+                            disk to the vmi. A proper cloud-init installation is required
+                            inside the guest. More info: http://cloudinit.readthedocs.io/en/latest/topics/datasources/nocloud.html'
+                          properties:
+                            networkData:
+                              description: NetworkData contains NoCloud inline cloud-init
+                                networkdata.
+                              type: string
+                            networkDataBase64:
+                              description: NetworkDataBase64 contains NoCloud cloud-init
+                                networkdata as a base64 encoded string.
+                              type: string
+                            networkDataSecretRef:
+                              description: NetworkDataSecretRef references a k8s secret
+                                that contains NoCloud networkdata.
+                              properties:
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    TODO: Add other useful fields. apiVersion, kind,
+                                    uid?'
+                                  type: string
+                              type: object
+                            secretRef:
+                              description: UserDataSecretRef references a k8s secret
+                                that contains NoCloud userdata.
+                              properties:
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    TODO: Add other useful fields. apiVersion, kind,
+                                    uid?'
+                                  type: string
+                              type: object
+                            userData:
+                              description: UserData contains NoCloud inline cloud-init
+                                userdata.
+                              type: string
+                            userDataBase64:
+                              description: UserDataBase64 contains NoCloud cloud-init
+                                userdata as a base64 encoded string.
+                              type: string
+                          type: object
+                        configMap:
+                          description: 'ConfigMapSource represents a reference to
+                            a ConfigMap in the same namespace. More info: https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/'
+                          properties:
+                            name:
+                              description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                TODO: Add other useful fields. apiVersion, kind, uid?'
+                              type: string
+                            optional:
+                              description: Specify whether the ConfigMap or it's keys
+                                must be defined
+                              type: boolean
+                            volumeLabel:
+                              description: The volume label of the resulting disk
+                                inside the VMI. Different bootstrapping mechanisms
+                                require different values. Typical values are "cidata"
+                                (cloud-init), "config-2" (cloud-init) or "OEMDRV"
+                                (kickstart).
+                              type: string
+                          type: object
+                        containerDisk:
+                          description: 'ContainerDisk references a docker image, embedding
+                            a qcow or raw disk. More info: https://kubevirt.gitbooks.io/user-guide/registry-disk.html'
+                          properties:
+                            image:
+                              description: Image is the name of the image with the
+                                embedded disk.
+                              type: string
+                            imagePullPolicy:
+                              description: 'Image pull policy. One of Always, Never,
+                                IfNotPresent. Defaults to Always if :latest tag is
+                                specified, or IfNotPresent otherwise. Cannot be updated.
+                                More info: https://kubernetes.io/docs/concepts/containers/images#updating-images'
+                              type: string
+                            imagePullSecret:
+                              description: ImagePullSecret is the name of the Docker
+                                registry secret required to pull the image. The secret
+                                must already exist.
+                              type: string
+                            path:
+                              description: Path defines the path to disk file in the
+                                container
+                              type: string
+                          required:
+                          - image
+                          type: object
+                        dataVolume:
+                          description: DataVolume represents the dynamic creation
+                            a PVC for this volume as well as the process of populating
+                            that PVC with a disk image.
+                          properties:
+                            hotpluggable:
+                              description: Hotpluggable indicates whether the volume
+                                can be hotplugged and hotunplugged.
+                              type: boolean
+                            name:
+                              description: Name represents the name of the DataVolume
+                                in the same namespace
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        downwardAPI:
+                          description: DownwardAPI represents downward API about the
+                            pod that should populate this volume
+                          properties:
+                            fields:
+                              description: Fields is a list of downward API volume
+                                file
+                              items:
+                                description: DownwardAPIVolumeFile represents information
+                                  to create the file containing the pod field
+                                properties:
+                                  fieldRef:
+                                    description: 'Required: Selects a field of the
+                                      pod: only annotations, labels, name and namespace
+                                      are supported.'
+                                    properties:
+                                      apiVersion:
+                                        description: Version of the schema the FieldPath
+                                          is written in terms of, defaults to "v1".
+                                        type: string
+                                      fieldPath:
+                                        description: Path of the field to select in
+                                          the specified API version.
+                                        type: string
+                                    required:
+                                    - fieldPath
+                                    type: object
+                                  mode:
+                                    description: 'Optional: mode bits used to set
+                                      permissions on this file, must be an octal value
+                                      between 0000 and 0777 or a decimal value between
+                                      0 and 511. YAML accepts both octal and decimal
+                                      values, JSON requires decimal values for mode
+                                      bits. If not specified, the volume defaultMode
+                                      will be used. This might be in conflict with
+                                      other options that affect the file mode, like
+                                      fsGroup, and the result can be other mode bits
+                                      set.'
+                                    format: int32
+                                    type: integer
+                                  path:
+                                    description: 'Required: Path is  the relative
+                                      path name of the file to be created. Must not
+                                      be absolute or contain the ''..'' path. Must
+                                      be utf-8 encoded. The first item of the relative
+                                      path must not start with ''..'''
+                                    type: string
+                                  resourceFieldRef:
+                                    description: 'Selects a resource of the container:
+                                      only resources limits and requests (limits.cpu,
+                                      limits.memory, requests.cpu and requests.memory)
+                                      are currently supported.'
+                                    properties:
+                                      containerName:
+                                        description: 'Container name: required for
+                                          volumes, optional for env vars'
+                                        type: string
+                                      divisor:
+                                        anyOf:
+                                        - type: integer
+                                        - type: string
+                                        description: Specifies the output format of
+                                          the exposed resources, defaults to "1"
+                                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                                        x-kubernetes-int-or-string: true
+                                      resource:
+                                        description: 'Required: resource to select'
+                                        type: string
+                                    required:
+                                    - resource
+                                    type: object
+                                required:
+                                - path
+                                type: object
+                              type: array
+                            volumeLabel:
+                              description: The volume label of the resulting disk
+                                inside the VMI. Different bootstrapping mechanisms
+                                require different values. Typical values are "cidata"
+                                (cloud-init), "config-2" (cloud-init) or "OEMDRV"
+                                (kickstart).
+                              type: string
+                          type: object
+                        downwardMetrics:
+                          description: DownwardMetrics adds a very small disk to VMIs
+                            which contains a limited view of host and guest metrics.
+                            The disk content is compatible with vhostmd (https://github.com/vhostmd/vhostmd)
+                            and vm-dump-metrics.
+                          type: object
+                        emptyDisk:
+                          description: 'EmptyDisk represents a temporary disk which
+                            shares the vmis lifecycle. More info: https://kubevirt.gitbooks.io/user-guide/disks-and-volumes.html'
+                          properties:
+                            capacity:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: Capacity of the sparse disk.
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                          required:
+                          - capacity
+                          type: object
+                        ephemeral:
+                          description: Ephemeral is a special volume source that "wraps"
+                            specified source and provides copy-on-write image on top
+                            of it.
+                          properties:
+                            persistentVolumeClaim:
+                              description: 'PersistentVolumeClaimVolumeSource represents
+                                a reference to a PersistentVolumeClaim in the same
+                                namespace. Directly attached to the vmi via qemu.
+                                More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims'
+                              properties:
+                                claimName:
+                                  description: 'ClaimName is the name of a PersistentVolumeClaim
+                                    in the same namespace as the pod using this volume.
+                                    More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims'
+                                  type: string
+                                readOnly:
+                                  description: Will force the ReadOnly setting in
+                                    VolumeMounts. Default false.
+                                  type: boolean
+                              required:
+                              - claimName
+                              type: object
+                          type: object
+                        hostDisk:
+                          description: HostDisk represents a disk created on the cluster
+                            level
+                          properties:
+                            capacity:
+                              anyOf:
+                              - type: integer
+                              - type: string
+                              description: Capacity of the sparse disk
+                              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                              x-kubernetes-int-or-string: true
+                            path:
+                              description: The path to HostDisk image located on the
+                                cluster
+                              type: string
+                            shared:
+                              description: Shared indicate whether the path is shared
+                                between nodes
+                              type: boolean
+                            type:
+                              description: Contains information if disk.img exists
+                                or should be created allowed options are 'Disk' and
+                                'DiskOrCreate'
+                              type: string
+                          required:
+                          - path
+                          - type
+                          type: object
+                        name:
+                          description: 'Volume''s name. Must be a DNS_LABEL and unique
+                            within the vmi. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                          type: string
+                        persistentVolumeClaim:
+                          description: 'PersistentVolumeClaimVolumeSource represents
+                            a reference to a PersistentVolumeClaim in the same namespace.
+                            Directly attached to the vmi via qemu. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims'
+                          properties:
+                            claimName:
+                              description: 'ClaimName is the name of a PersistentVolumeClaim
+                                in the same namespace as the pod using this volume.
+                                More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims'
+                              type: string
+                            hotpluggable:
+                              description: Hotpluggable indicates whether the volume
+                                can be hotplugged and hotunplugged.
+                              type: boolean
+                            readOnly:
+                              description: Will force the ReadOnly setting in VolumeMounts.
+                                Default false.
+                              type: boolean
+                          required:
+                          - claimName
+                          type: object
+                        secret:
+                          description: 'SecretVolumeSource represents a reference
+                            to a secret data in the same namespace. More info: https://kubernetes.io/docs/concepts/configuration/secret/'
+                          properties:
+                            optional:
+                              description: Specify whether the Secret or it's keys
+                                must be defined
+                              type: boolean
+                            secretName:
+                              description: 'Name of the secret in the pod''s namespace
+                                to use. More info: https://kubernetes.io/docs/concepts/storage/volumes#secret'
+                              type: string
+                            volumeLabel:
+                              description: The volume label of the resulting disk
+                                inside the VMI. Different bootstrapping mechanisms
+                                require different values. Typical values are "cidata"
+                                (cloud-init), "config-2" (cloud-init) or "OEMDRV"
+                                (kickstart).
+                              type: string
+                          type: object
+                        serviceAccount:
+                          description: 'ServiceAccountVolumeSource represents a reference
+                            to a service account. There can only be one volume of
+                            this type! More info: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/'
+                          properties:
+                            serviceAccountName:
+                              description: 'Name of the service account in the pod''s
+                                namespace to use. More info: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/'
+                              type: string
+                          type: object
+                        sysprep:
+                          description: Represents a Sysprep volume source.
+                          properties:
+                            configMap:
+                              description: ConfigMap references a ConfigMap that contains
+                                Sysprep answer file named autounattend.xml that should
+                                be attached as disk of CDROM type.
+                              properties:
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    TODO: Add other useful fields. apiVersion, kind,
+                                    uid?'
+                                  type: string
+                              type: object
+                            secret:
+                              description: Secret references a k8s Secret that contains
+                                Sysprep answer file named autounattend.xml that should
+                                be attached as disk of CDROM type.
+                              properties:
+                                name:
+                                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    TODO: Add other useful fields. apiVersion, kind,
+                                    uid?'
+                                  type: string
+                              type: object
+                          type: object
+                      required:
+                      - name
+                      type: object
+                    type: array
+                type: object
+            type: object
+          status:
+            description: VirtualMachineStatus represents the status returned by the
+              controller to describe how the VirtualMachine is doing
+            properties:
+              conditions:
+                description: Hold the state information of the VirtualMachine and
+                  its VirtualMachineInstance
+                items:
+                  description: VirtualMachineCondition represents the state of VirtualMachine
+                  properties:
+                    lastProbeTime:
+                      format: date-time
+                      nullable: true
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      nullable: true
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              created:
+                description: Created indicates if the virtual machine is created in
+                  the cluster
+                type: boolean
+              printableStatus:
+                description: PrintableStatus is a human readable, high-level representation
+                  of the status of the virtual machine
+                type: string
+              ready:
+                description: Ready indicates if the virtual machine is running and
+                  ready
+                type: boolean
+              restoreInProgress:
+                description: RestoreInProgress is the name of the VirtualMachineRestore
+                  currently executing
+                type: string
+              snapshotInProgress:
+                description: SnapshotInProgress is the name of the VirtualMachineSnapshot
+                  currently executing
+                type: string
+              startFailure:
+                description: StartFailure tracks consecutive VMI startup failures
+                  for the purposes of crash loop backoffs
+                nullable: true
+                properties:
+                  consecutiveFailCount:
+                    type: integer
+                  lastFailedVMIUID:
+                    description: UID is a type that holds unique ID values, including
+                      UUIDs.  Because we don't ONLY use UUIDs, this is an alias to
+                      string.  Being a type captures intent and helps make sure that
+                      UIDs and names do not get conflated.
+                    type: string
+                  retryAfterTimestamp:
+                    format: date-time
+                    type: string
+                type: object
+              stateChangeRequests:
+                description: StateChangeRequests indicates a list of actions that
+                  should be taken on a VMI e.g. stop a specific VMI then start a new
+                  one.
+                items:
+                  properties:
+                    action:
+                      description: Indicates the type of action that is requested.
+                        e.g. Start or Stop
+                      type: string
+                    data:
+                      additionalProperties:
+                        type: string
+                      description: Provides additional data in order to perform the
+                        Action
+                      type: object
+                    uid:
+                      description: Indicates the UUID of an existing Virtual Machine
+                        Instance that this change request applies to -- if applicable
+                      type: string
+                  required:
+                  - action
+                  type: object
+                type: array
+              volumeRequests:
+                description: VolumeRequests indicates a list of volumes add or remove
+                  from the VMI template and hotplug on an active running VMI.
+                items:
+                  properties:
+                    addVolumeOptions:
+                      description: AddVolumeOptions when set indicates a volume should
+                        be added. The details within this field specify how to add
+                        the volume
+                      properties:
+                        disk:
+                          description: Disk represents the hotplug disk that will
+                            be plugged into the running VMI
+                          properties:
+                            blockSize:
+                              description: If specified, the virtual disk will be
+                                presented with the given block sizes.
+                              properties:
+                                custom:
+                                  description: CustomBlockSize represents the desired
+                                    logical and physical block size for a VM disk.
+                                  properties:
+                                    logical:
+                                      type: integer
+                                    physical:
+                                      type: integer
+                                  required:
+                                  - logical
+                                  - physical
+                                  type: object
+                                matchVolume:
+                                  description: Represents if a feature is enabled
+                                    or disabled.
+                                  properties:
+                                    enabled:
+                                      description: Enabled determines if the feature
+                                        should be enabled or disabled on the guest.
+                                        Defaults to true.
+                                      type: boolean
+                                  type: object
+                              type: object
+                            bootOrder:
+                              description: BootOrder is an integer value > 0, used
+                                to determine ordering of boot devices. Lower values
+                                take precedence. Each disk or interface that has a
+                                boot order must have a unique value. Disks without
+                                a boot order are not tried if a disk with a boot order
+                                exists.
+                              type: integer
+                            cache:
+                              description: 'Cache specifies which kvm disk cache mode
+                                should be used. Supported values are: CacheNone, CacheWriteThrough.'
+                              type: string
+                            cdrom:
+                              description: Attach a volume as a cdrom to the vmi.
+                              properties:
+                                bus:
+                                  description: 'Bus indicates the type of disk device
+                                    to emulate. supported values: virtio, sata, scsi.'
+                                  type: string
+                                readonly:
+                                  description: ReadOnly. Defaults to true.
+                                  type: boolean
+                                tray:
+                                  description: Tray indicates if the tray of the device
+                                    is open or closed. Allowed values are "open" and
+                                    "closed". Defaults to closed.
+                                  type: string
+                              type: object
+                            dedicatedIOThread:
+                              description: dedicatedIOThread indicates this disk should
+                                have an exclusive IO Thread. Enabling this implies
+                                useIOThreads = true. Defaults to false.
+                              type: boolean
+                            disk:
+                              description: Attach a volume as a disk to the vmi.
+                              properties:
+                                bus:
+                                  description: 'Bus indicates the type of disk device
+                                    to emulate. supported values: virtio, sata, scsi.'
+                                  type: string
+                                pciAddress:
+                                  description: 'If specified, the virtual disk will
+                                    be placed on the guests pci address with the specified
+                                    PCI address. For example: 0000:81:01.10'
+                                  type: string
+                                readonly:
+                                  description: ReadOnly. Defaults to false.
+                                  type: boolean
+                              type: object
+                            floppy:
+                              description: Attach a volume as a floppy to the vmi.
+                              properties:
+                                readonly:
+                                  description: ReadOnly. Defaults to false.
+                                  type: boolean
+                                tray:
+                                  description: Tray indicates if the tray of the device
+                                    is open or closed. Allowed values are "open" and
+                                    "closed". Defaults to closed.
+                                  type: string
+                              type: object
+                            io:
+                              description: 'IO specifies which QEMU disk IO mode should
+                                be used. Supported values are: native, default, threads.'
+                              type: string
+                            lun:
+                              description: Attach a volume as a LUN to the vmi.
+                              properties:
+                                bus:
+                                  description: 'Bus indicates the type of disk device
+                                    to emulate. supported values: virtio, sata, scsi.'
+                                  type: string
+                                readonly:
+                                  description: ReadOnly. Defaults to false.
+                                  type: boolean
+                              type: object
+                            name:
+                              description: Name is the device name
+                              type: string
+                            serial:
+                              description: Serial provides the ability to specify
+                                a serial number for the disk device.
+                              type: string
+                            tag:
+                              description: If specified, disk address and its tag
+                                will be provided to the guest via config drive metadata
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        dryRun:
+                          description: 'When present, indicates that modifications
+                            should not be persisted. An invalid or unrecognized dryRun
+                            directive will result in an error response and no further
+                            processing of the request. Valid values are: - All: all
+                            dry run stages will be processed'
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                        name:
+                          description: Name represents the name that will be used
+                            to map the disk to the corresponding volume. This overrides
+                            any name set inside the Disk struct itself.
+                          type: string
+                        volumeSource:
+                          description: VolumeSource represents the source of the volume
+                            to map to the disk.
+                          properties:
+                            dataVolume:
+                              description: DataVolume represents the dynamic creation
+                                a PVC for this volume as well as the process of populating
+                                that PVC with a disk image.
+                              properties:
+                                hotpluggable:
+                                  description: Hotpluggable indicates whether the
+                                    volume can be hotplugged and hotunplugged.
+                                  type: boolean
+                                name:
+                                  description: Name represents the name of the DataVolume
+                                    in the same namespace
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            persistentVolumeClaim:
+                              description: 'PersistentVolumeClaimVolumeSource represents
+                                a reference to a PersistentVolumeClaim in the same
+                                namespace. Directly attached to the vmi via qemu.
+                                More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims'
+                              properties:
+                                claimName:
+                                  description: 'ClaimName is the name of a PersistentVolumeClaim
+                                    in the same namespace as the pod using this volume.
+                                    More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#persistentvolumeclaims'
+                                  type: string
+                                hotpluggable:
+                                  description: Hotpluggable indicates whether the
+                                    volume can be hotplugged and hotunplugged.
+                                  type: boolean
+                                readOnly:
+                                  description: Will force the ReadOnly setting in
+                                    VolumeMounts. Default false.
+                                  type: boolean
+                              required:
+                              - claimName
+                              type: object
+                          type: object
+                      required:
+                      - disk
+                      - name
+                      - volumeSource
+                      type: object
+                    removeVolumeOptions:
+                      description: RemoveVolumeOptions when set indicates a volume
+                        should be removed. The details within this field specify how
+                        to add the volume
+                      properties:
+                        dryRun:
+                          description: 'When present, indicates that modifications
+                            should not be persisted. An invalid or unrecognized dryRun
+                            directive will result in an error response and no further
+                            processing of the request. Valid values are: - All: all
+                            dry run stages will be processed'
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                        name:
+                          description: Name represents the name that maps to both
+                            the disk and volume that should be removed
+                          type: string
+                      required:
+                      - name
+                      type: object
+                  type: object
+                type: array
+                x-kubernetes-list-type: atomic
+              volumeSnapshotStatuses:
+                description: VolumeSnapshotStatuses indicates a list of statuses whether
+                  snapshotting is supported by each volume.
+                items:
+                  properties:
+                    enabled:
+                      description: True if the volume supports snapshotting
+                      type: boolean
+                    name:
+                      description: Volume name
+                      type: string
+                    reason:
+                      description: Empty if snapshotting is enabled, contains reason
+                        otherwise
+                      type: string
+                  required:
+                  - enabled
+                  - name
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
