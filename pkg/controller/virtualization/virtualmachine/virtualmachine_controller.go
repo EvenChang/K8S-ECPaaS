@@ -182,7 +182,7 @@ func getVirtualMachineStatus(virtClient kubecli.KubevirtClient, namespace string
 
 }
 
-func applyVirtualMachineSpec(kvvmSpec kvapi.VirtualMachineSpec, virtzSpec virtzv1alpha1.VirtualMachineSpec) kvapi.VirtualMachineSpec {
+func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtzv1alpha1.VirtualMachineSpec) {
 
 	runStrategy := kvapi.RunStrategyAlways
 	kvvmSpec.RunStrategy = &runStrategy
@@ -231,6 +231,16 @@ func applyVirtualMachineSpec(kvvmSpec kvapi.VirtualMachineSpec, virtzSpec virtzv
 					},
 				}
 			}
+			if volume.ContainerDisk != nil {
+				kvvmSpec.Template.Spec.Volumes[i] = kvapi.Volume{
+					Name: volume.Name,
+					VolumeSource: kvapi.VolumeSource{
+						ContainerDisk: &kvapi.ContainerDiskSource{
+							Image: volume.ContainerDisk.Image,
+						},
+					},
+				}
+			}
 		}
 	}
 
@@ -263,7 +273,6 @@ func applyVirtualMachineSpec(kvvmSpec kvapi.VirtualMachineSpec, virtzSpec virtzv
 		}
 	}
 
-	return kvvmSpec
 }
 
 func createVirtualMachine(virtClient kubecli.KubevirtClient, namespace string, virtzVM *virtzv1alpha1.VirtualMachine) error {
@@ -276,9 +285,10 @@ func createVirtualMachine(virtClient kubecli.KubevirtClient, namespace string, v
 			Name:      virtzVM.ObjectMeta.Name,
 			Namespace: namespace,
 		},
+		Spec: kvapi.VirtualMachineSpec{},
 	}
 
-	kvVM.Spec = applyVirtualMachineSpec(kvVM.Spec, virtzVM.Spec)
+	applyVirtualMachineSpec(&kvVM.Spec, virtzVM.Spec)
 
 	createdVM, err := virtClient.VirtualMachine(namespace).Create(kvVM)
 	if err != nil {
