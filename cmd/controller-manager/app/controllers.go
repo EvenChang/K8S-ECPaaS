@@ -41,6 +41,7 @@ import (
 	"kubesphere.io/kubesphere/pkg/controller/quota"
 	"kubesphere.io/kubesphere/pkg/controller/serviceaccount"
 	"kubesphere.io/kubesphere/pkg/controller/user"
+	"kubesphere.io/kubesphere/pkg/controller/virtualization/virtualmachine"
 	"kubesphere.io/kubesphere/pkg/controller/workspace"
 	"kubesphere.io/kubesphere/pkg/controller/workspacerole"
 	"kubesphere.io/kubesphere/pkg/controller/workspacerolebinding"
@@ -119,6 +120,8 @@ var allControllers = []string{
 	"group",
 
 	"notification",
+
+	"virtualmachine",
 }
 
 // setup all available controllers one by one
@@ -538,6 +541,12 @@ func addAllControllers(mgr manager.Manager, client k8s.Client, informerFactory i
 			}
 			addController(mgr, "notification", notificationController)
 		}
+	}
+
+	// "virtual machine" controller
+	if cmOptions.IsControllerEnabled("virtualmachine") {
+		virtualMachineReconciler := &virtualmachine.Reconciler{}
+		addControllerWithSetup(mgr, "virtualmachine", virtualMachineReconciler)
 	}
 
 	// log all controllers process result

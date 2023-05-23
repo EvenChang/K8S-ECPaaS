@@ -41,23 +41,19 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-ldap/ldap v3.0.3+incompatible
 	github.com/go-logr/logr v0.4.0
-	github.com/go-openapi/jsonreference v0.19.5 // indirect
 	github.com/go-openapi/loads v0.19.5
 	github.com/go-openapi/spec v0.19.7
 	github.com/go-openapi/strfmt v0.19.5
-	github.com/go-openapi/swag v0.19.14 // indirect
 	github.com/go-openapi/validate v0.19.8
 	github.com/go-redis/redis v6.15.2+incompatible
 	github.com/gofrs/uuid v3.2.0+incompatible // indirect
 	github.com/golang/example v0.0.0-20170904185048-46695d81d1fa
-	github.com/golang/glog v1.0.0 // indirect
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-containerregistry v0.6.0
 	github.com/google/gops v0.3.23
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/handlers v1.4.0 // indirect
 	github.com/gorilla/websocket v1.4.2
-	github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f // indirect
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/json-iterator/go v1.1.12
 	github.com/jszwec/csvutil v1.5.0
@@ -98,9 +94,7 @@ require (
 	github.com/yvasiyarov/newrelic_platform_go v0.0.0-20140908184405-b21fdbd4370f // indirect
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
-	golang.org/x/term v0.0.0-20210615171337-6886f2dfbf5b // indirect
 	google.golang.org/grpc v1.30.0
-	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 	gopkg.in/cas.v2 v2.2.0
 	gopkg.in/square/go-jose.v1 v1.1.2 // indirect
@@ -131,7 +125,8 @@ require (
 	kubesphere.io/api v0.0.0
 	kubesphere.io/client-go v0.0.0
 	kubesphere.io/monitoring-dashboard v0.2.2
-	kubevirt.io/api v0.49.1 // indirect
+	kubevirt.io/api v0.49.1
+	kubevirt.io/client-go v0.49.1
 	rsc.io/letsencrypt v0.0.1 // indirect
 	sigs.k8s.io/application v0.8.4-0.20201016185654-c8e2959e57a0
 	sigs.k8s.io/controller-runtime v0.10.0
@@ -813,7 +808,7 @@ replace (
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
 	k8s.io/kubectl => k8s.io/kubectl v0.21.2
 	k8s.io/metrics => k8s.io/metrics v0.21.2
-	k8s.io/utils => k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
+	k8s.io/utils => k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b
 	kubesphere.io/api => ./staging/src/kubesphere.io/api
 	kubesphere.io/client-go => ./staging/src/kubesphere.io/client-go
 	kubesphere.io/monitoring-dashboard => kubesphere.io/monitoring-dashboard v0.2.2
