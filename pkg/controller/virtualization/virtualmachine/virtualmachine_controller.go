@@ -187,6 +187,8 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 
 	kvvmSpec.Template.Spec.Domain.Resources.Requests = virtzSpec.Hardware.Domain.Resources.Requests
 
+	kvvmSpec.Template.Spec.Hostname = virtzSpec.Hardware.Hostname
+
 	if virtzSpec.Hardware.Volumes != nil {
 		kvvmSpec.Template.Spec.Domain.Devices.Disks = make([]kvapi.Disk, len(virtzSpec.Hardware.Volumes))
 		for i, volume := range virtzSpec.Hardware.Volumes {
