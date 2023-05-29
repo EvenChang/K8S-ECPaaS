@@ -36,6 +36,7 @@ type Interface interface {
 	DeleteVpcNetwork(vpcnetwork string) error
 	GetVpcSubnet(namespace, vpcsubnet string) (*v1.VPCSubnet, error)
 	ListVpcSubnet(query *query.Query) (*api.ListResult, error)
+	ListVpcSubnetWithinVpcNetwork(vpcnetwork string, queryParam *query.Query) (*api.ListResult, error)
 	CreateVpcSubnet(vpcsubnet *v1.VPCSubnet) (*v1.VPCSubnet, error)
 	UpdateVpcSubnet(vpcsubnet *v1.VPCSubnet) (*v1.VPCSubnet, error)
 	PatchVpcSubnet(namespace, vpcsubnetName string, vpcsubnet *v1.VPCSubnet) (*v1.VPCSubnet, error)
@@ -240,6 +241,34 @@ func (t *vpcOperator) ListVpcSubnet(queryParam *query.Query) (*api.ListResult, e
 	return result, nil
 }
 
+func (t *vpcOperator) ListVpcSubnetWithinVpcNetwork(vpcnetwork string, queryParam *query.Query) (*api.ListResult, error) {
+
+	vpcsubnets, err := t.ksclient.K8sV1().VPCSubnets("").List(context.Background(), metav1.ListOptions{})
+
+	if err != nil {
+		klog.Error(err)
+		return nil, err
+	}
+
+	items := []v1.VPCSubnet{}
+	for _, item := range vpcsubnets.Items {
+		if item.Spec.Vpc == vpcnetwork {
+			items = append(items, item)
+		}
+	}
+
+	result := api.ListResult{
+		Items:      make([]interface{}, len(items)),
+		TotalItems: len(items),
+	}
+
+	for i, item := range items {
+		result.Items[i] = item
+	}
+
+	return &result, nil
+}
+
 func (t *vpcOperator) GetVpcSubnet(namespace, vpcsubnet string) (*v1.VPCSubnet, error) {
 	obj, err := t.resourceGetter.Get(v1.ResourcePluralVpcSubnets, namespace, vpcsubnet)
 
@@ -254,6 +283,12 @@ func (t *vpcOperator) GetVpcSubnet(namespace, vpcsubnet string) (*v1.VPCSubnet, 
 func (t *vpcOperator) CreateVpcSubnet(vpcsubnet *v1.VPCSubnet) (*v1.VPCSubnet, error) {
 	// update vpc subnet name into namespace meatadata labels
 	_, err := addVpcSubnetNameIntoNamespace(t, vpcsubnet)
+	if err != nil {
+		return nil, err
+	}
+
+	// Assign VPC network into VPC Subnet SPEC vpc element.
+	err = t.assignVPCNetworkIntoVPCSubnet(vpcsubnet)
 	if err != nil {
 		return nil, err
 	}
@@ -295,11 +330,23 @@ func (t *vpcOperator) UpdateVpcSubnet(vpcsubnet *v1.VPCSubnet) (*v1.VPCSubnet, e
 
 	vpcsubnet.ObjectMeta.ResourceVersion = vpc.ResourceVersion
 
+	// Assign VPC network into VPC Subnet SPEC vpc element.
+	err = t.assignVPCNetworkIntoVPCSubnet(vpcsubnet)
+	if err != nil {
+		return nil, err
+	}
+
 	return t.ksclient.K8sV1().VPCSubnets(vpcsubnet.ObjectMeta.Namespace).Update(context.Background(), vpcsubnet, metav1.UpdateOptions{})
 }
 
 func (t *vpcOperator) PatchVpcSubnet(namespace, vpcsubnetName string, vpcsubnet *v1.VPCSubnet) (*v1.VPCSubnet, error) {
-	_, err := t.DescribeVpcSubnet(namespace, vpcsubnetName)
+	oldVpcsubnet, err := t.DescribeVpcSubnet(namespace, vpcsubnetName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update VPC network into VPC Subnet SPEC vpc element.
+	err = t.updateVPCNetworkIntoVPCSubnet(vpcsubnet, oldVpcsubnet.Namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -346,6 +393,48 @@ func deleteVpcSubnetNameFromNamespace(t *vpcOperator, namespaceName string) erro
 	if err != nil {
 		klog.Error(err)
 		return err
+	}
+	return nil
+}
+
+func (t *vpcOperator) assignVPCNetworkIntoVPCSubnet(vpcsubnet *v1.VPCSubnet) error {
+	if vpcsubnet.Spec.Vpc == "" {
+		ns, err := t.k8sclient.CoreV1().Namespaces().Get(context.Background(), vpcsubnet.Namespace, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		workspace := ns.Labels["kubesphere.io/workspace"]
+		if workspace != "" {
+			ws, err := t.ksclient.TenantV1alpha2().WorkspaceTemplates().Get(context.Background(), workspace, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			vpc := ws.Labels["k8s.ovn.org/vpcnetwork"]
+			if vpc != "" {
+				vpcsubnet.Spec.Vpc = vpc
+			}
+		}
+	}
+	return nil
+}
+
+func (t *vpcOperator) updateVPCNetworkIntoVPCSubnet(newVpcsubnet *v1.VPCSubnet, namespace string) error {
+	if newVpcsubnet.Spec.Vpc == "" {
+		ns, err := t.k8sclient.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		workspace := ns.Labels["kubesphere.io/workspace"]
+		if workspace != "" {
+			ws, err := t.ksclient.TenantV1alpha2().WorkspaceTemplates().Get(context.Background(), workspace, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			vpc := ws.Labels["k8s.ovn.org/vpcnetwork"]
+			if vpc != "" {
+				newVpcsubnet.Spec.Vpc = vpc
+			}
+		}
 	}
 	return nil
 }

@@ -86,6 +86,12 @@ func AddToContainer(container *restful.Container, factory informers.InformerFact
 		Returns(http.StatusOK, api.StatusOK, api.ListResult{}).
 		Metadata(restfulspec.KeyOpenAPITags, []string{constants.VpcSubnetTag}))
 
+	webservice.Route(webservice.GET("/vpcnetwork/{vpcnetwork}/vpcsubnets").
+		To(handler.ListVpcSubnetWithinVpcNetwork).
+		Doc("List all vpcsubnet resource within vpcnetwork").
+		Returns(http.StatusOK, api.StatusOK, api.ListResult{}).
+		Metadata(restfulspec.KeyOpenAPITags, []string{constants.VpcSubnetTag}))
+
 	webservice.Route(webservice.GET("/vpcsubnet/{namespace}/{vpcsubnet}").
 		To(handler.GetVpcSubnet).
 		Param(webservice.PathParameter("namespace", "namespace name")).

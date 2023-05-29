@@ -240,6 +240,25 @@ func (h *handler) ListVpcSubnet(request *restful.Request, response *restful.Resp
 	response.WriteAsJson(vpcsubnets)
 }
 
+func (h *handler) ListVpcSubnetWithinVpcNetwork(request *restful.Request, response *restful.Response) {
+
+	vpcnetwork := request.PathParameter("vpcnetwork")
+	queryParam := query.ParseQueryParameter(request)
+	vpcsubnets, err := h.vpc.ListVpcSubnetWithinVpcNetwork(vpcnetwork, queryParam)
+
+	if err != nil {
+		if errors.IsNotFound(err) {
+			api.HandleNotFound(response, request, err)
+			return
+		} else {
+			api.HandleInternalError(response, request, err)
+			return
+		}
+	}
+
+	response.WriteAsJson(vpcsubnets)
+}
+
 func (h *handler) GetVpcSubnet(request *restful.Request, response *restful.Response) {
 
 	vpcsubnet := request.PathParameter("vpcsubnet")
