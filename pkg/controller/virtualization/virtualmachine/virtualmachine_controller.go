@@ -1,3 +1,7 @@
+/*
+Copyright(c) 2023-present Accton. All rights reserved. www.accton.com.tw
+*/
+
 package virtualmachine
 
 import (
@@ -76,13 +80,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	clientConfig := kubecli.DefaultClientConfig(&pflag.FlagSet{})
 
-	// retrive default namespace.
-	namespace, _, err := clientConfig.Namespace()
-	if err != nil {
-		klog.Infof("Error in namespace : %v\n", err.Error())
-		return ctrl.Result{}, err
-	}
-
 	// get the kubevirt client, using which kubevirt resources can be managed.
 	virtClient, err := kubecli.GetKubevirtClientFromClientConfig(clientConfig)
 	if err != nil {
@@ -92,7 +89,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if IsDeletionCandidate(vm_instance, virtzv1alpha1.VirtualMachineFinalizer) {
 		klog.Infof("Deleting VirtualMachine %s/%s", req.Namespace, req.Name)
-		if err := deleteVirtualMachine(virtClient, namespace, vm_instance); err != nil {
+		if err := deleteVirtualMachine(virtClient, req.Namespace, vm_instance); err != nil {
 			return ctrl.Result{}, err
 		}
 
@@ -109,14 +106,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		klog.Infof("Creating VirtualMachine %s/%s", req.Namespace, req.Name)
-		err := createVirtualMachine(virtClient, namespace, vm_instance)
+		err := createVirtualMachine(virtClient, req.Namespace, vm_instance)
 
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
-	if err := getVirtualMachineStatus(virtClient, namespace, vm_instance); err != nil {
+	if err := getVirtualMachineStatus(virtClient, req.Namespace, vm_instance); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -193,6 +190,8 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 	kvvmSpec.Template.Spec.Domain.Resources = kvapi.ResourceRequirements{}
 
 	kvvmSpec.Template.Spec.Domain.Resources.Requests = virtzSpec.Hardware.Domain.Resources.Requests
+
+	kvvmSpec.Template.Spec.Hostname = virtzSpec.Hardware.Hostname
 
 	if virtzSpec.Hardware.Volumes != nil {
 		kvvmSpec.Template.Spec.Domain.Devices.Disks = make([]kvapi.Disk, len(virtzSpec.Hardware.Volumes))
