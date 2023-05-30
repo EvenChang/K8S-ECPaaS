@@ -18,4 +18,8 @@ limitations under the License.
 
 package v1alpha1
 
+type DataVolumeBlankImageExpansion interface{}
+
+type DiskVolumeExpansion interface{}
+
 type VirtualMachineExpansion interface{}

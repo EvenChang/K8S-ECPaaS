@@ -18,6 +18,18 @@ limitations under the License.
 
 package v1alpha1
 
+// DataVolumeBlankImageListerExpansion allows custom methods to be added to
+// DataVolumeBlankImageLister.
+type DataVolumeBlankImageListerExpansion interface{}
+
+// DiskVolumeListerExpansion allows custom methods to be added to
+// DiskVolumeLister.
+type DiskVolumeListerExpansion interface{}
+
+// DiskVolumeNamespaceListerExpansion allows custom methods to be added to
+// DiskVolumeNamespaceLister.
+type DiskVolumeNamespaceListerExpansion interface{}
+
 // VirtualMachineListerExpansion allows custom methods to be added to
 // VirtualMachineLister.
 type VirtualMachineListerExpansion interface{}

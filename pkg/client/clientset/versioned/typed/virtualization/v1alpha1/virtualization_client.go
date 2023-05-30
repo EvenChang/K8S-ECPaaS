@@ -26,12 +26,22 @@ import (
 
 type VirtualizationV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	DataVolumeBlankImagesGetter
+	DiskVolumesGetter
 	VirtualMachinesGetter
 }
 
 // VirtualizationV1alpha1Client is used to interact with features provided by the virtualization.ecpaas.io group.
 type VirtualizationV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *VirtualizationV1alpha1Client) DataVolumeBlankImages() DataVolumeBlankImageInterface {
+	return newDataVolumeBlankImages(c)
+}
+
+func (c *VirtualizationV1alpha1Client) DiskVolumes(namespace string) DiskVolumeInterface {
+	return newDiskVolumes(c, namespace)
 }
 
 func (c *VirtualizationV1alpha1Client) VirtualMachines(namespace string) VirtualMachineInterface {
