@@ -14,7 +14,7 @@ type DiskVolumeSource struct {
 
 // DiskVolumeSpec defines the desired state of DiskVolume
 type DiskVolumeSpec struct {
-	pvcName string `json:"pvcName,omitempty"`
+	PVCName string `json:"pvcName,omitempty"`
 	// Resources represents the minimum resources the volume should have.
 	Resources ResourceRequirements `json:"resources,omitempty"`
 	// Source is the source of the volume.
