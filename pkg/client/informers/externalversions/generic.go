@@ -204,8 +204,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Types().V1beta1().FederatedStatefulSets().Informer()}, nil
 
 		// Group=virtualization.ecpaas.io, Version=v1alpha1
-	case virtualizationv1alpha1.SchemeGroupVersion.WithResource("datavolumeblankimages"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Virtualization().V1alpha1().DataVolumeBlankImages().Informer()}, nil
 	case virtualizationv1alpha1.SchemeGroupVersion.WithResource("diskvolumes"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Virtualization().V1alpha1().DiskVolumes().Informer()}, nil
 	case virtualizationv1alpha1.SchemeGroupVersion.WithResource("virtualmachines"):

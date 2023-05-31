@@ -28,10 +28,6 @@ type FakeVirtualizationV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeVirtualizationV1alpha1) DataVolumeBlankImages() v1alpha1.DataVolumeBlankImageInterface {
-	return &FakeDataVolumeBlankImages{c}
-}
-
 func (c *FakeVirtualizationV1alpha1) DiskVolumes(namespace string) v1alpha1.DiskVolumeInterface {
 	return &FakeDiskVolumes{c, namespace}
 }
