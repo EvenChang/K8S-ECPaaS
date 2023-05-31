@@ -28,6 +28,10 @@ type FakeVirtualizationV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeVirtualizationV1alpha1) DiskVolumes(namespace string) v1alpha1.DiskVolumeInterface {
+	return &FakeDiskVolumes{c, namespace}
+}
+
 func (c *FakeVirtualizationV1alpha1) VirtualMachines(namespace string) v1alpha1.VirtualMachineInterface {
 	return &FakeVirtualMachines{c, namespace}
 }

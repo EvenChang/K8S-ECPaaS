@@ -41,6 +41,7 @@ import (
 	"kubesphere.io/kubesphere/pkg/controller/quota"
 	"kubesphere.io/kubesphere/pkg/controller/serviceaccount"
 	"kubesphere.io/kubesphere/pkg/controller/user"
+	"kubesphere.io/kubesphere/pkg/controller/virtualization/diskvolume"
 	"kubesphere.io/kubesphere/pkg/controller/virtualization/virtualmachine"
 	"kubesphere.io/kubesphere/pkg/controller/workspace"
 	"kubesphere.io/kubesphere/pkg/controller/workspacerole"
@@ -122,6 +123,7 @@ var allControllers = []string{
 	"notification",
 
 	"virtualmachine",
+	"diskvolume",
 }
 
 // setup all available controllers one by one
@@ -547,6 +549,12 @@ func addAllControllers(mgr manager.Manager, client k8s.Client, informerFactory i
 	if cmOptions.IsControllerEnabled("virtualmachine") {
 		virtualMachineReconciler := &virtualmachine.Reconciler{}
 		addControllerWithSetup(mgr, "virtualmachine", virtualMachineReconciler)
+	}
+
+	// "disk volume" controller
+	if cmOptions.IsControllerEnabled("diskvolume") {
+		diskVolumeReconciler := &diskvolume.Reconciler{}
+		addControllerWithSetup(mgr, "diskvolume", diskVolumeReconciler)
 	}
 
 	// log all controllers process result
