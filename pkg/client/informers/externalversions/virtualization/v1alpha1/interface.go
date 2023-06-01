@@ -26,6 +26,8 @@ import (
 type Interface interface {
 	// DiskVolumes returns a DiskVolumeInformer.
 	DiskVolumes() DiskVolumeInformer
+	// ImageTemplates returns a ImageTemplateInformer.
+	ImageTemplates() ImageTemplateInformer
 	// VirtualMachines returns a VirtualMachineInformer.
 	VirtualMachines() VirtualMachineInformer
 }
@@ -44,6 +46,11 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // DiskVolumes returns a DiskVolumeInformer.
 func (v *version) DiskVolumes() DiskVolumeInformer {
 	return &diskVolumeInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// ImageTemplates returns a ImageTemplateInformer.
+func (v *version) ImageTemplates() ImageTemplateInformer {
+	return &imageTemplateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // VirtualMachines returns a VirtualMachineInformer.

@@ -26,6 +26,14 @@ type DiskVolumeListerExpansion interface{}
 // DiskVolumeNamespaceLister.
 type DiskVolumeNamespaceListerExpansion interface{}
 
+// ImageTemplateListerExpansion allows custom methods to be added to
+// ImageTemplateLister.
+type ImageTemplateListerExpansion interface{}
+
+// ImageTemplateNamespaceListerExpansion allows custom methods to be added to
+// ImageTemplateNamespaceLister.
+type ImageTemplateNamespaceListerExpansion interface{}
+
 // VirtualMachineListerExpansion allows custom methods to be added to
 // VirtualMachineLister.
 type VirtualMachineListerExpansion interface{}

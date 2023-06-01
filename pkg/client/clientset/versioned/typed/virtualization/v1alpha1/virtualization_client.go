@@ -27,6 +27,7 @@ import (
 type VirtualizationV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	DiskVolumesGetter
+	ImageTemplatesGetter
 	VirtualMachinesGetter
 }
 
@@ -37,6 +38,10 @@ type VirtualizationV1alpha1Client struct {
 
 func (c *VirtualizationV1alpha1Client) DiskVolumes(namespace string) DiskVolumeInterface {
 	return newDiskVolumes(c, namespace)
+}
+
+func (c *VirtualizationV1alpha1Client) ImageTemplates(namespace string) ImageTemplateInterface {
+	return newImageTemplates(c, namespace)
 }
 
 func (c *VirtualizationV1alpha1Client) VirtualMachines(namespace string) VirtualMachineInterface {
