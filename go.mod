@@ -10,6 +10,7 @@ require (
 	code.cloudfoundry.org/bytefmt v0.0.0-20190710193110-1eb035ffe2b6
 	github.com/MakeNowJust/heredoc v0.0.0-20171113091838-e9091a26100e // indirect
 	github.com/Masterminds/semver/v3 v3.1.1
+	github.com/Microsoft/hcsshim v0.8.17 // indirect
 	github.com/PuerkitoBio/goquery v1.5.0
 	github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d // indirect
 	github.com/asaskevich/govalidator v0.0.0-20200428143746-21a406dcc535
@@ -20,10 +21,13 @@ require (
 	github.com/bugsnag/panicwrap v1.2.0 // indirect
 	github.com/containernetworking/cni v0.8.0
 	github.com/coreos/go-oidc v2.1.0+incompatible
+	github.com/coreos/prometheus-operator v0.38.1-0.20200424145508-7e176fda06cc // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/docker/distribution v2.7.1+incompatible
 	github.com/docker/docker v20.10.7+incompatible
+	github.com/docker/go-metrics v0.0.1 // indirect
+	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
 	github.com/elastic/go-elasticsearch/v5 v5.6.1
 	github.com/elastic/go-elasticsearch/v6 v6.8.2
 	github.com/elastic/go-elasticsearch/v7 v7.3.0
@@ -46,26 +50,34 @@ require (
 	github.com/go-redis/redis v6.15.2+incompatible
 	github.com/gofrs/uuid v3.2.0+incompatible // indirect
 	github.com/golang/example v0.0.0-20170904185048-46695d81d1fa
+	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-containerregistry v0.6.0
 	github.com/google/gops v0.3.23
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/handlers v1.4.0 // indirect
+	github.com/gorilla/mux v1.7.4 // indirect
 	github.com/gorilla/websocket v1.4.2
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/json-iterator/go v1.1.12
 	github.com/jszwec/csvutil v1.5.0
+	github.com/kelseyhightower/envconfig v1.4.0 // indirect
+	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/kubernetes-csi/external-snapshotter/client/v4 v4.2.0
 	github.com/kubesphere/pvc-autoresizer v0.1.1
 	github.com/kubesphere/sonargo v0.0.2
 	github.com/kubesphere/storageclass-accessor v0.2.0
 	github.com/lann/builder v0.0.0-20180802200727-47ae307949d0 // indirect
 	github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0 // indirect
+	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mitchellh/mapstructure v1.2.2
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.15.0
 	github.com/open-policy-agent/opa v0.18.0
 	github.com/opencontainers/go-digest v1.0.0
+	github.com/opencontainers/image-spec v1.0.2-0.20190823105129-775207bd45b6 // indirect
+	github.com/opencontainers/runc v1.0.3 // indirect
+	github.com/openshift/api v0.0.0 // indirect
 	github.com/operator-framework/helm-operator-plugins v0.0.8-0.20210810182245-240cc447b3de
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pkg/errors v0.9.1
@@ -84,6 +96,7 @@ require (
 	github.com/spf13/viper v1.8.1
 	github.com/stretchr/testify v1.7.0
 	github.com/xanzy/ssh-agent v0.2.1 // indirect
+	github.com/xeipuuv/gojsonpointer v0.0.0-20190809123943-df4f5c81cb3b // indirect
 	github.com/xenolf/lego v0.3.2-0.20160613233155-a9d8cec0e656 // indirect
 	github.com/yvasiyarov/go-metrics v0.0.0-20150112132944-c25f46c4b940 // indirect
 	github.com/yvasiyarov/gorelic v0.0.6 // indirect
@@ -91,6 +104,7 @@ require (
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
 	google.golang.org/grpc v1.30.0
+	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 	gopkg.in/cas.v2 v2.2.0
 	gopkg.in/square/go-jose.v1 v1.1.2 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1
@@ -122,7 +136,7 @@ require (
 	kubesphere.io/monitoring-dashboard v0.2.2
 	kubevirt.io/api v0.49.1
 	kubevirt.io/client-go v0.49.1
-	kubevirt.io/containerized-data-importer v0.0.0-00010101000000-000000000000 // indirect
+	kubevirt.io/controller-lifecycle-operator-sdk v0.2.2 // indirect
 	rsc.io/letsencrypt v0.0.1 // indirect
 	sigs.k8s.io/application v0.8.4-0.20201016185654-c8e2959e57a0
 	sigs.k8s.io/controller-runtime v0.10.0
