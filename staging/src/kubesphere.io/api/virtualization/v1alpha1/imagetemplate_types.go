@@ -34,7 +34,7 @@ type ImageTemplateStatus struct {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// DiskVolume is the Schema for the diskvolumes API
+// ImageTemplate is the Schema for the diskvolumes API
 type ImageTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -45,11 +45,11 @@ type ImageTemplate struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// VirtualMachineList contains a list of VirtualMachine
+// ImageTemplateList contains a list of VirtualMachine
 type ImageTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []DiskVolume `json:"items"`
+	Items           []ImageTemplate `json:"items"`
 }
 
 func init() {

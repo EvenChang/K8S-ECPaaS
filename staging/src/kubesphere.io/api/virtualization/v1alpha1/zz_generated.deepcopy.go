@@ -366,7 +366,7 @@ func (in *ImageTemplateList) DeepCopyInto(out *ImageTemplateList) {
 	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
-		*out = make([]DiskVolume, len(*in))
+		*out = make([]ImageTemplate, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -398,7 +398,7 @@ func (in *ImageTemplateSource) DeepCopyInto(out *ImageTemplateSource) {
 	if in.HTTP != nil {
 		in, out := &in.HTTP, &out.HTTP
 		*out = new(v1beta1.DataVolumeSourceHTTP)
-		(*in).DeepCopyInto(*out)
+		**out = **in
 	}
 	return
 }

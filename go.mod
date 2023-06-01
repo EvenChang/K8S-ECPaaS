@@ -136,6 +136,7 @@ require (
 	kubesphere.io/monitoring-dashboard v0.2.2
 	kubevirt.io/api v0.49.1
 	kubevirt.io/client-go v0.49.1
+	kubevirt.io/containerized-data-importer-api v1.41.0
 	kubevirt.io/controller-lifecycle-operator-sdk v0.2.2 // indirect
 	rsc.io/letsencrypt v0.0.1 // indirect
 	sigs.k8s.io/application v0.8.4-0.20201016185654-c8e2959e57a0
@@ -826,8 +827,8 @@ replace (
 	kubesphere.io/client-go => ./staging/src/kubesphere.io/client-go
 	kubesphere.io/monitoring-dashboard => kubesphere.io/monitoring-dashboard v0.2.2
 	kubevirt.io/client-go => kubevirt.io/client-go v0.49.1
-	kubevirt.io/containerized-data-importer => kubevirt.io/containerized-data-importer v1.42.0
-	kubevirt.io/containerized-data-importer-api => kubevirt.io/containerized-data-importer-api v1.42.0
+	kubevirt.io/containerized-data-importer => kubevirt.io/containerized-data-importer v1.41.0
+	kubevirt.io/containerized-data-importer-api => kubevirt.io/containerized-data-importer-api v1.41.0
 	rsc.io/binaryregexp => rsc.io/binaryregexp v0.2.0
 	rsc.io/letsencrypt => rsc.io/letsencrypt v0.0.1
 	rsc.io/pdf => rsc.io/pdf v0.1.1
