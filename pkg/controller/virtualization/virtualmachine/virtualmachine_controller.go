@@ -164,7 +164,6 @@ func (c *Reconciler) removeFinalizer(virtualmachine *virtzv1alpha1.VirtualMachin
 	return nil
 }
 
-// generate the GetVirtualMachineStatus function
 func getVirtualMachineStatus(virtClient kubecli.KubevirtClient, namespace string, vm *virtzv1alpha1.VirtualMachine) error {
 	kv_vm := kvapi.VirtualMachine{}
 
