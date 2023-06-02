@@ -42,6 +42,7 @@ import (
 	"kubesphere.io/kubesphere/pkg/controller/serviceaccount"
 	"kubesphere.io/kubesphere/pkg/controller/user"
 	"kubesphere.io/kubesphere/pkg/controller/virtualization/diskvolume"
+	"kubesphere.io/kubesphere/pkg/controller/virtualization/imagetemplate"
 	"kubesphere.io/kubesphere/pkg/controller/virtualization/virtualmachine"
 	"kubesphere.io/kubesphere/pkg/controller/workspace"
 	"kubesphere.io/kubesphere/pkg/controller/workspacerole"
@@ -124,6 +125,7 @@ var allControllers = []string{
 
 	"virtualmachine",
 	"diskvolume",
+	"imagetemplate",
 }
 
 // setup all available controllers one by one
@@ -555,6 +557,12 @@ func addAllControllers(mgr manager.Manager, client k8s.Client, informerFactory i
 	if cmOptions.IsControllerEnabled("diskvolume") {
 		diskVolumeReconciler := &diskvolume.Reconciler{}
 		addControllerWithSetup(mgr, "diskvolume", diskVolumeReconciler)
+	}
+
+	// "image template" controller
+	if cmOptions.IsControllerEnabled("imagetemplate") {
+		imageTemplateReconciler := &imagetemplate.Reconciler{}
+		addControllerWithSetup(mgr, "imagetemplate", imageTemplateReconciler)
 	}
 
 	// log all controllers process result
