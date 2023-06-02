@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -147,6 +148,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// get data volume's status
 	dv, err := virtClient.CdiClient().CdiV1beta1().DataVolumes(imageTemplate.Namespace).Get(rootCtx, imageTemplate.Name, metav1.GetOptions{})
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
 		klog.Infof("Cannot get DataVolume: %v\n", err)
 		return ctrl.Result{}, err
 	}
