@@ -46,6 +46,7 @@ import (
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/minio/minio-go/v7"
 	audit "kubesphere.io/kubesphere/pkg/apiserver/auditing"
 	"kubesphere.io/kubesphere/pkg/apiserver/authentication/authenticators/basic"
 	"kubesphere.io/kubesphere/pkg/apiserver/authentication/authenticators/jwt"
@@ -91,6 +92,7 @@ import (
 	tenantv1alpha3 "kubesphere.io/kubesphere/pkg/kapis/tenant/v1alpha3"
 	terminalv1alpha2 "kubesphere.io/kubesphere/pkg/kapis/terminal/v1alpha2"
 	"kubesphere.io/kubesphere/pkg/kapis/version"
+	volumev1alpha1 "kubesphere.io/kubesphere/pkg/kapis/volume/v1alpha1"
 	vpcv1 "kubesphere.io/kubesphere/pkg/kapis/vpc/v1"
 	"kubesphere.io/kubesphere/pkg/models/auth"
 	"kubesphere.io/kubesphere/pkg/models/iam/am"
@@ -168,6 +170,8 @@ type APIServer struct {
 	ClusterClient clusterclient.ClusterClients
 
 	OpenpitrixClient openpitrix.Interface
+
+	MinioClient *minio.Client
 }
 
 func (s *APIServer) PrepareRun(stopCh <-chan struct{}) error {
@@ -274,6 +278,8 @@ func (s *APIServer) installKubeSphereAPIs(stopCh <-chan struct{}) {
 	urlruntime.Must(gatewayv1alpha1.AddToContainer(s.container, s.Config.GatewayOptions, s.RuntimeCache, s.RuntimeClient, s.InformerFactory, s.KubernetesClient.Kubernetes(), s.LoggingClient))
 	// accton extension
 	urlruntime.Must(vpcv1.AddToContainer(s.container, s.InformerFactory, s.KubernetesClient.Kubernetes(), s.KubernetesClient.KubeSphere()))
+	// kubevirt extension
+	urlruntime.Must(volumev1alpha1.AddToContainer(s.container, s.MinioClient))
 }
 
 // installCRDAPIs Install CRDs to the KAPIs with List and Get options

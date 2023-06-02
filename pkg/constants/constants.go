@@ -145,6 +145,8 @@ const (
 	// accton extension
 	VpcNetworkTag = "VPC Network"
 	VpcSubnetTag  = "VPC Subnet"
+
+	MinioImageTag = "Minio Images"
 )
 
 var (
