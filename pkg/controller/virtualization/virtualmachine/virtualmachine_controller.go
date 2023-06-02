@@ -106,7 +106,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		klog.Infof("Creating VirtualMachine %s/%s", req.Namespace, req.Name)
-		err := createVirtualMachine(virtClient, req.Namespace, vm_instance)
+		err := createVirtualMachine(virtClient, vm_instance)
 
 		if err != nil {
 			return ctrl.Result{}, err
@@ -115,6 +115,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if err := getVirtualMachineStatus(virtClient, req.Namespace, vm_instance); err != nil {
 		return ctrl.Result{}, err
+	}
+
+	if !vm_instance.Status.Ready {
+		klog.V(2).Infof("VirtualMachine %s/%s is not ready", req.Namespace, req.Name)
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
 	if !reflect.DeepEqual(vm, vm_instance) {
@@ -274,7 +279,15 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 
 }
 
-func createVirtualMachine(virtClient kubecli.KubevirtClient, namespace string, virtzVM *virtzv1alpha1.VirtualMachine) error {
+func createVirtualMachine(virtClient kubecli.KubevirtClient, virtzVM *virtzv1alpha1.VirtualMachine) error {
+
+	blockOwnerDeletion := true
+	controller := true
+
+	namespace := "default"
+	if virtzVM.Namespace != "" {
+		namespace = virtzVM.Namespace
+	}
 
 	kvVM := &kvapi.VirtualMachine{
 		TypeMeta: metav1.TypeMeta{
@@ -286,6 +299,14 @@ func createVirtualMachine(virtClient kubecli.KubevirtClient, namespace string, v
 		},
 		Spec: kvapi.VirtualMachineSpec{},
 	}
+	kvVM.OwnerReferences = append(kvVM.OwnerReferences, metav1.OwnerReference{
+		APIVersion:         virtzVM.APIVersion,
+		BlockOwnerDeletion: &blockOwnerDeletion,
+		Controller:         &controller,
+		Kind:               virtzVM.Kind,
+		Name:               virtzVM.Name,
+		UID:                virtzVM.UID,
+	})
 
 	applyVirtualMachineSpec(&kvVM.Spec, virtzVM.Spec)
 
@@ -295,18 +316,10 @@ func createVirtualMachine(virtClient kubecli.KubevirtClient, namespace string, v
 		return err
 	}
 
-	//FIXME: this is a workaround to wait for the VM to be ready, maybe we can use a watch instead
-	for {
-		createdVM, err = virtClient.VirtualMachine(createdVM.Namespace).Get(createdVM.Name, &metav1.GetOptions{})
-		if err != nil && !errors.IsNotFound(err) {
-			klog.Infof(err.Error())
-			return err
-		}
-
-		if createdVM.Status.Ready {
-			break
-		}
-		time.Sleep(2 * time.Second)
+	createdVM, err = virtClient.VirtualMachine(createdVM.Namespace).Get(createdVM.Name, &metav1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		klog.Infof(err.Error())
+		return err
 	}
 
 	virtzVM.Status = createdVM.Status
