@@ -7,6 +7,7 @@ package imagetemplate
 import (
 	"context"
 	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/pflag"
@@ -82,9 +83,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	status := imageTemplate_instance.Status
-
-	if !status.Created {
+	if !imageTemplate_instance.Status.Created {
 		// Create data volume
 
 		blockOwnerDeletion := true
@@ -132,10 +131,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 		if dv.Status.Phase != cdiv1.Succeeded {
 			klog.Infof("DataVolume %s/%s is not ready", dv.Namespace, dv.Name)
-			status.Ready = false
+			imageTemplate_instance.Status.Ready = false
 		}
 
-		status.Created = true
+		imageTemplate_instance.Status.Created = true
 		klog.Infof("DataVolume %s/%s created", dv.Namespace, dv.Name)
 	}
 
@@ -145,11 +144,28 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
+	// get data volume's status
+	dv, err := virtClient.CdiClient().CdiV1beta1().DataVolumes(imageTemplate.Namespace).Get(rootCtx, imageTemplate.Name, metav1.GetOptions{})
+	if err != nil {
+		klog.Infof("Cannot get DataVolume: %v\n", err)
+		return ctrl.Result{}, err
+	}
+
+	wait := time.Duration(0)
+
+	if dv.Status.Phase != cdiv1.Succeeded {
+		klog.Infof("DataVolume %s/%s is not ready, progress %s", dv.Namespace, dv.Name, dv.Status.Progress)
+		imageTemplate_instance.Status.Ready = false
+		wait = time.Duration(10) * time.Second
+	} else {
+		klog.Infof("DataVolume %s/%s is ready", dv.Namespace, dv.Name)
+		imageTemplate_instance.Status.Ready = true
+	}
+
 	// Update status
-	imageTemplate_instance.Status = status
 	if err := r.Status().Update(rootCtx, imageTemplate_instance); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: wait}, nil
 }
