@@ -125,6 +125,7 @@ var allControllers = []string{
 
 	"virtualmachine",
 	"diskvolume",
+	"imagetemplate",
 }
 
 // setup all available controllers one by one
