@@ -18,7 +18,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	storagev1 "k8s.io/api/storage/v1"
 
@@ -62,7 +61,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
 	klog.V(2).Infof("Reconciling VirtualMachine %s/%s", req.Namespace, req.Name)
 
 	rootCtx := context.Background()
