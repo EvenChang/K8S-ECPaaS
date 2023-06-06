@@ -191,6 +191,17 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 	kvvmSpec.Template.Spec.Domain = kvapi.DomainSpec{}
 	kvvmSpec.Template.Spec.Domain.Resources = kvapi.ResourceRequirements{}
 
+	if virtzSpec.Hardware.Domain.Devices.Interfaces != nil {
+		kvvmSpec.Template.Spec.Domain.Devices.Interfaces = make([]kvapi.Interface, len(virtzSpec.Hardware.Domain.Devices.Interfaces))
+		for i, iface := range virtzSpec.Hardware.Domain.Devices.Interfaces {
+			interfaceMehod := getInterfaceMethod(iface)
+			kvvmSpec.Template.Spec.Domain.Devices.Interfaces[i] = kvapi.Interface{
+				Name:                   iface.Name,
+				InterfaceBindingMethod: interfaceMehod,
+			}
+		}
+	}
+
 	kvvmSpec.Template.Spec.Domain.Resources.Requests = virtzSpec.Hardware.Domain.Resources.Requests
 
 	kvvmSpec.Template.Spec.Hostname = virtzSpec.Hardware.Hostname
@@ -245,6 +256,18 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 		}
 	}
 
+	if virtzSpec.Hardware.Networks != nil {
+		kvvmSpec.Template.Spec.Networks = make([]kvapi.Network, len(virtzSpec.Hardware.Networks))
+		for i, network := range virtzSpec.Hardware.Networks {
+			networkSource := getNetwork(network)
+			kvvmSpec.Template.Spec.Networks[i] = kvapi.Network{
+				Name:          network.Name,
+				NetworkSource: networkSource,
+			}
+		}
+
+	}
+
 	if virtzSpec.DiskVolumes != nil {
 		for _, volume := range virtzSpec.DiskVolumes {
 			newVolume := kvapi.Volume{
@@ -274,6 +297,49 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 		}
 	}
 
+}
+
+func getInterfaceMethod(iface virtzv1alpha1.Interface) kvapi.InterfaceBindingMethod {
+	interfaceMethod := kvapi.InterfaceBindingMethod{}
+
+	klog.Info("test")
+	if iface.Bridge != nil {
+		interfaceMethod.Bridge = &kvapi.InterfaceBridge{}
+	} else if iface.Macvtap != nil {
+		interfaceMethod.Macvtap = &kvapi.InterfaceMacvtap{}
+	} else if iface.Masquerade != nil {
+		interfaceMethod.Masquerade = &kvapi.InterfaceMasquerade{}
+	} else if iface.SRIOV != nil {
+		interfaceMethod.SRIOV = &kvapi.InterfaceSRIOV{}
+	} else if iface.Slirp != nil {
+		interfaceMethod.Slirp = &kvapi.InterfaceSlirp{}
+	} else {
+		// default assign interface to pod network.
+		interfaceMethod.Masquerade = &kvapi.InterfaceMasquerade{}
+	}
+
+	return interfaceMethod
+}
+
+func getNetwork(network virtzv1alpha1.Network) kvapi.NetworkSource {
+	networkSource := kvapi.NetworkSource{}
+
+	if network.Pod != nil {
+		networkSource.Pod = &kvapi.PodNetwork{
+			VMNetworkCIDR:     network.Pod.VMNetworkCIDR,
+			VMIPv6NetworkCIDR: network.Pod.VMIPv6NetworkCIDR,
+		}
+	} else if network.Multus != nil {
+		networkSource.Multus = &kvapi.MultusNetwork{
+			NetworkName: network.Multus.NetworkName,
+			Default:     network.Multus.Default,
+		}
+	} else {
+		// default assign interface to pod network.
+		networkSource.Pod = &kvapi.PodNetwork{}
+	}
+
+	return networkSource
 }
 
 func createVirtualMachine(virtClient kubecli.KubevirtClient, virtzVM *virtzv1alpha1.VirtualMachine) error {
