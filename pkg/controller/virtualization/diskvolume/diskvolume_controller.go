@@ -28,6 +28,7 @@ const (
 	controllerName        = "diskvolume-controller"
 	successSynced         = "Synced"
 	messageResourceSynced = "DiskVolume synced successfully"
+	pvcNamePrefix         = "tpl-"
 )
 
 // Reconciler reconciles a disk volume object
@@ -96,7 +97,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		controller := true
 
 		pvc := &corev1.PersistentVolumeClaim{}
-		pvc.Name = dv_instance.Name
+		pvc.Name = pvcNamePrefix + dv_instance.Name
 		pvc.Namespace = dv_instance.Namespace
 		pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
 		pvc.Spec.Resources = corev1.ResourceRequirements{}
