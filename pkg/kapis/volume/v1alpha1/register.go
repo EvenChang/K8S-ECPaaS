@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"kubesphere.io/kubesphere/pkg/api"
 	"kubesphere.io/kubesphere/pkg/apiserver/runtime"
+	kubesphere "kubesphere.io/kubesphere/pkg/client/clientset/versioned"
 	"kubesphere.io/kubesphere/pkg/constants"
 	"kubesphere.io/kubesphere/pkg/server/errors"
 )
@@ -27,9 +28,9 @@ func Resource(resource string) schema.GroupResource {
 	return GroupVersion.WithResource(resource).GroupResource()
 }
 
-func AddToContainer(container *restful.Container, minioClient *minio.Client) error {
+func AddToContainer(container *restful.Container, minioClient *minio.Client, ksclient kubesphere.Interface) error {
 	webservice := runtime.NewWebService(GroupVersion)
-	handler := newHandler(minioClient)
+	handler := newHandler(minioClient, ksclient)
 
 	webservice.Route(webservice.GET("/upload/file/images").
 		To(handler.ListMinioObjects).

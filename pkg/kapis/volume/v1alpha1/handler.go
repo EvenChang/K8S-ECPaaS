@@ -9,19 +9,28 @@ import (
 
 	"github.com/emicklei/go-restful"
 	"github.com/minio/minio-go/v7"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog"
+	v1alpha1 "kubesphere.io/api/virtualization/v1alpha1"
 	"kubesphere.io/kubesphere/pkg/api"
+	kubesphere "kubesphere.io/kubesphere/pkg/client/clientset/versioned"
 	"kubesphere.io/kubesphere/pkg/server/errors"
+	"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 )
 
 var bucketName = "ecpaas-images"
 
 type handler struct {
 	minioClient *minio.Client
+	ksclient    kubesphere.Interface
 }
 
-func newHandler(minioClient *minio.Client) *handler {
+func newHandler(minioClient *minio.Client, ksclient kubesphere.Interface) *handler {
 	return &handler{
 		minioClient: minioClient,
+		ksclient:    ksclient,
 	}
 }
 
@@ -109,8 +118,11 @@ func (h *handler) UploadMinioObject(request *restful.Request, response *restful.
 		api.HandleInternalError(response, request, err)
 		return
 	}
-
 	filesize := file.(Sizer).Size()
+
+	name := request.Request.FormValue("name")
+	namespace := request.Request.FormValue("namespace")
+	storage := request.Request.FormValue("storage")
 
 	request.Request.MultipartReader()
 
@@ -119,6 +131,40 @@ func (h *handler) UploadMinioObject(request *restful.Request, response *restful.
 
 	if err != nil {
 		api.HandleInternalError(response, request, err)
+		return
+	}
+
+	// After finished upload image process, create the ImageTemplete resource for kubevirt dataVolume use.
+
+	if namespace == "" {
+		namespace = "default"
+	}
+
+	imageTeplate := &v1alpha1.ImageTemplate{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: v1alpha1.ImageTemplateSpec{
+			Resources: v1alpha1.ResourceRequirements{
+				Requests: v1.ResourceList{
+					v1.ResourceStorage: resource.MustParse(storage),
+				},
+			},
+			Source: v1alpha1.ImageTemplateSource{
+				HTTP: &v1beta1.DataVolumeSourceHTTP{
+					URL: uploadInfo.Location,
+				},
+			},
+		},
+	}
+
+	_, err = h.ksclient.VirtualizationV1alpha1().ImageTemplates(namespace).Create(context.Background(), imageTeplate, metav1.CreateOptions{})
+
+	if err != nil {
+		klog.Info("Create ImageTemplates resource failed. ", err)
 		return
 	}
 
