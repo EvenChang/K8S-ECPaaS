@@ -91,37 +91,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	status := &dv_instance.Status
 	if !status.Created {
 		// create pvc
-		klog.Infof("Creating pvc %s/%s", dv_instance.Namespace, dv_instance.Spec.PVCName)
-
-		blockOwnerDeletion := true
-		controller := true
-
-		pvc := &corev1.PersistentVolumeClaim{}
-		pvc.Name = pvcNamePrefix + dv_instance.Name
-		pvc.Namespace = dv_instance.Namespace
-		pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
-		pvc.Spec.Resources = corev1.ResourceRequirements{}
-		pvc.Spec.Resources.Requests = corev1.ResourceList{}
-		pvc.Spec.Resources.Requests[corev1.ResourceStorage] = dv_instance.Spec.Resources.Requests[corev1.ResourceStorage]
-		pvc.Spec.StorageClassName = &scName
-		// owner reference
-		pvc.OwnerReferences = []metav1.OwnerReference{
-			{
-				APIVersion:         dv_instance.APIVersion,
-				BlockOwnerDeletion: &blockOwnerDeletion,
-				Controller:         &controller,
-				Kind:               dv_instance.Kind,
-				Name:               dv_instance.Name,
-				UID:                dv_instance.UID,
-			},
-		}
-
-		if err := r.Create(rootCtx, pvc); err != nil {
-			return ctrl.Result{}, err
+		if dv_instance.Spec.Source.Blank != nil {
+			err := r.createPVC(dv_instance, scName)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 
 		status.Created = true
-		klog.Infof("PVC %s/%s created", pvc.Namespace, pvc.Name)
+
 	}
 
 	if !reflect.DeepEqual(dv, dv_instance) {
@@ -140,4 +118,39 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	r.Recorder.Event(dv, corev1.EventTypeNormal, successSynced, messageResourceSynced)
 	return ctrl.Result{}, nil
 
+}
+
+func (r *Reconciler) createPVC(dv_instance *virtzv1alpha1.DiskVolume, scName string) error {
+	klog.Infof("Creating pvc %s/%s", dv_instance.Namespace, dv_instance.Spec.PVCName)
+
+	blockOwnerDeletion := true
+	controller := true
+
+	pvc := &corev1.PersistentVolumeClaim{}
+	pvc.Name = pvcNamePrefix + dv_instance.Name
+	pvc.Namespace = dv_instance.Namespace
+	pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
+	pvc.Spec.Resources = corev1.ResourceRequirements{}
+	pvc.Spec.Resources.Requests = corev1.ResourceList{}
+	pvc.Spec.Resources.Requests[corev1.ResourceStorage] = dv_instance.Spec.Resources.Requests[corev1.ResourceStorage]
+	pvc.Spec.StorageClassName = &scName
+	// owner reference
+	pvc.OwnerReferences = []metav1.OwnerReference{
+		{
+			APIVersion:         dv_instance.APIVersion,
+			BlockOwnerDeletion: &blockOwnerDeletion,
+			Controller:         &controller,
+			Kind:               dv_instance.Kind,
+			Name:               dv_instance.Name,
+			UID:                dv_instance.UID,
+		},
+	}
+
+	if err := r.Create(context.Background(), pvc); err != nil {
+		return err
+	}
+
+	klog.Infof("PVC %s/%s created", pvc.Namespace, pvc.Name)
+
+	return nil
 }
