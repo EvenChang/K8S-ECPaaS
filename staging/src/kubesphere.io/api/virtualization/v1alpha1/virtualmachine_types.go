@@ -10,11 +10,6 @@ import (
 	kvapi "kubevirt.io/api/core/v1"
 )
 
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +k8s:openapi-gen=true
-// +genclient:nonNamespaced
-
 const VirtualMachineFinalizer = "finalizers.virtualization.ecpaas.io/virtualmachine"
 
 type DiskVolumeTemplateSourceImage struct {
@@ -62,11 +57,30 @@ type MacVtap struct {
 }
 
 type Interface struct {
-	MacVtap MacVtap `json:"macvtap,omitempty"`
-	Name    string  `json:"name,omitempty"`
+	Name                   string `json:"name,omitempty"`
+	InterfaceBindingMethod `json:",inline"`
 }
 
+type InterfaceBindingMethod struct {
+	Bridge     *InterfaceBridge     `json:"bridge,omitempty"`
+	Slirp      *InterfaceSlirp      `json:"slirp,omitempty"`
+	Masquerade *InterfaceMasquerade `json:"masquerade,omitempty"`
+	SRIOV      *InterfaceSRIOV      `json:"sriov,omitempty"`
+	Macvtap    *InterfaceMacvtap    `json:"macvtap,omitempty"`
+}
+
+type InterfaceBridge struct{}
+
+type InterfaceSlirp struct{}
+
+type InterfaceMasquerade struct{}
+
+type InterfaceSRIOV struct{}
+
+type InterfaceMacvtap struct{}
+
 type Devices struct {
+	// Interfaces describe network interfaces which are added to the vmi.
 	Interfaces []Interface `json:"interfaces,omitempty"`
 }
 
@@ -81,8 +95,23 @@ type Multus struct {
 }
 
 type Network struct {
-	Multus Multus `json:"multus,omitempty"`
-	Name   string `json:"name,omitempty"`
+	Name          string `json:"name"`
+	NetworkSource `json:",inline"`
+}
+
+type NetworkSource struct {
+	Pod    *PodNetwork    `json:"pod,omitempty"`
+	Multus *MultusNetwork `json:"multus,omitempty"`
+}
+
+type PodNetwork struct {
+	VMNetworkCIDR     string `json:"vmNetworkCIDR,omitempty"`
+	VMIPv6NetworkCIDR string `json:"vmIPv6NetworkCIDR,omitempty"`
+}
+
+type MultusNetwork struct {
+	NetworkName string `json:"networkName"`
+	Default     bool   `json:"default,omitempty"`
 }
 
 type Hardware struct {

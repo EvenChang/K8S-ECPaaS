@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,7 +66,6 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
 	klog.V(2).Infof("Reconciling VirtualMachine %s/%s", req.Namespace, req.Name)
 
 	rootCtx := context.Background()
@@ -106,7 +104,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		klog.Infof("Creating VirtualMachine %s/%s", req.Namespace, req.Name)
-		err := createVirtualMachine(virtClient, req.Namespace, vm_instance)
+		err := createVirtualMachine(virtClient, vm_instance)
 
 		if err != nil {
 			return ctrl.Result{}, err
@@ -115,6 +113,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	if err := getVirtualMachineStatus(virtClient, req.Namespace, vm_instance); err != nil {
 		return ctrl.Result{}, err
+	}
+
+	if !vm_instance.Status.Ready {
+		klog.V(2).Infof("VirtualMachine %s/%s is not ready", req.Namespace, req.Name)
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
 	if !reflect.DeepEqual(vm, vm_instance) {
@@ -161,7 +164,6 @@ func (c *Reconciler) removeFinalizer(virtualmachine *virtzv1alpha1.VirtualMachin
 	return nil
 }
 
-// generate the GetVirtualMachineStatus function
 func getVirtualMachineStatus(virtClient kubecli.KubevirtClient, namespace string, vm *virtzv1alpha1.VirtualMachine) error {
 	kv_vm := kvapi.VirtualMachine{}
 
@@ -188,6 +190,17 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 	kvvmSpec.Template.Spec = kvapi.VirtualMachineInstanceSpec{}
 	kvvmSpec.Template.Spec.Domain = kvapi.DomainSpec{}
 	kvvmSpec.Template.Spec.Domain.Resources = kvapi.ResourceRequirements{}
+
+	if virtzSpec.Hardware.Domain.Devices.Interfaces != nil {
+		kvvmSpec.Template.Spec.Domain.Devices.Interfaces = make([]kvapi.Interface, len(virtzSpec.Hardware.Domain.Devices.Interfaces))
+		for i, iface := range virtzSpec.Hardware.Domain.Devices.Interfaces {
+			interfaceMehod := getInterfaceMethod(iface)
+			kvvmSpec.Template.Spec.Domain.Devices.Interfaces[i] = kvapi.Interface{
+				Name:                   iface.Name,
+				InterfaceBindingMethod: interfaceMehod,
+			}
+		}
+	}
 
 	kvvmSpec.Template.Spec.Domain.Resources.Requests = virtzSpec.Hardware.Domain.Resources.Requests
 
@@ -243,6 +256,18 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 		}
 	}
 
+	if virtzSpec.Hardware.Networks != nil {
+		kvvmSpec.Template.Spec.Networks = make([]kvapi.Network, len(virtzSpec.Hardware.Networks))
+		for i, network := range virtzSpec.Hardware.Networks {
+			networkSource := getNetwork(network)
+			kvvmSpec.Template.Spec.Networks[i] = kvapi.Network{
+				Name:          network.Name,
+				NetworkSource: networkSource,
+			}
+		}
+
+	}
+
 	if virtzSpec.DiskVolumes != nil {
 		for _, volume := range virtzSpec.DiskVolumes {
 			newVolume := kvapi.Volume{
@@ -274,7 +299,58 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 
 }
 
-func createVirtualMachine(virtClient kubecli.KubevirtClient, namespace string, virtzVM *virtzv1alpha1.VirtualMachine) error {
+func getInterfaceMethod(iface virtzv1alpha1.Interface) kvapi.InterfaceBindingMethod {
+	interfaceMethod := kvapi.InterfaceBindingMethod{}
+
+	klog.Info("test")
+	if iface.Bridge != nil {
+		interfaceMethod.Bridge = &kvapi.InterfaceBridge{}
+	} else if iface.Macvtap != nil {
+		interfaceMethod.Macvtap = &kvapi.InterfaceMacvtap{}
+	} else if iface.Masquerade != nil {
+		interfaceMethod.Masquerade = &kvapi.InterfaceMasquerade{}
+	} else if iface.SRIOV != nil {
+		interfaceMethod.SRIOV = &kvapi.InterfaceSRIOV{}
+	} else if iface.Slirp != nil {
+		interfaceMethod.Slirp = &kvapi.InterfaceSlirp{}
+	} else {
+		// default assign interface to pod network.
+		interfaceMethod.Masquerade = &kvapi.InterfaceMasquerade{}
+	}
+
+	return interfaceMethod
+}
+
+func getNetwork(network virtzv1alpha1.Network) kvapi.NetworkSource {
+	networkSource := kvapi.NetworkSource{}
+
+	if network.Pod != nil {
+		networkSource.Pod = &kvapi.PodNetwork{
+			VMNetworkCIDR:     network.Pod.VMNetworkCIDR,
+			VMIPv6NetworkCIDR: network.Pod.VMIPv6NetworkCIDR,
+		}
+	} else if network.Multus != nil {
+		networkSource.Multus = &kvapi.MultusNetwork{
+			NetworkName: network.Multus.NetworkName,
+			Default:     network.Multus.Default,
+		}
+	} else {
+		// default assign interface to pod network.
+		networkSource.Pod = &kvapi.PodNetwork{}
+	}
+
+	return networkSource
+}
+
+func createVirtualMachine(virtClient kubecli.KubevirtClient, virtzVM *virtzv1alpha1.VirtualMachine) error {
+
+	blockOwnerDeletion := true
+	controller := true
+
+	namespace := "default"
+	if virtzVM.Namespace != "" {
+		namespace = virtzVM.Namespace
+	}
 
 	kvVM := &kvapi.VirtualMachine{
 		TypeMeta: metav1.TypeMeta{
@@ -286,6 +362,14 @@ func createVirtualMachine(virtClient kubecli.KubevirtClient, namespace string, v
 		},
 		Spec: kvapi.VirtualMachineSpec{},
 	}
+	kvVM.OwnerReferences = append(kvVM.OwnerReferences, metav1.OwnerReference{
+		APIVersion:         virtzVM.APIVersion,
+		BlockOwnerDeletion: &blockOwnerDeletion,
+		Controller:         &controller,
+		Kind:               virtzVM.Kind,
+		Name:               virtzVM.Name,
+		UID:                virtzVM.UID,
+	})
 
 	applyVirtualMachineSpec(&kvVM.Spec, virtzVM.Spec)
 
@@ -295,18 +379,10 @@ func createVirtualMachine(virtClient kubecli.KubevirtClient, namespace string, v
 		return err
 	}
 
-	//FIXME: this is a workaround to wait for the VM to be ready, maybe we can use a watch instead
-	for {
-		createdVM, err = virtClient.VirtualMachine(createdVM.Namespace).Get(createdVM.Name, &metav1.GetOptions{})
-		if err != nil && !errors.IsNotFound(err) {
-			klog.Infof(err.Error())
-			return err
-		}
-
-		if createdVM.Status.Ready {
-			break
-		}
-		time.Sleep(2 * time.Second)
+	createdVM, err = virtClient.VirtualMachine(createdVM.Namespace).Get(createdVM.Name, &metav1.GetOptions{})
+	if err != nil && !errors.IsNotFound(err) {
+		klog.Infof(err.Error())
+		return err
 	}
 
 	virtzVM.Status = createdVM.Status

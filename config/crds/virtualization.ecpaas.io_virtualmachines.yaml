@@ -109,12 +109,22 @@ spec:
                       devices:
                         properties:
                           interfaces:
+                            description: Interfaces describe network interfaces which
+                              are added to the vmi.
                             items:
                               properties:
+                                bridge:
+                                  type: object
                                 macvtap:
+                                  type: object
+                                masquerade:
                                   type: object
                                 name:
                                   type: string
+                                slirp:
+                                  type: object
+                                sriov:
+                                  type: object
                               type: object
                             type: array
                         type: object
@@ -153,11 +163,24 @@ spec:
                       properties:
                         multus:
                           properties:
+                            default:
+                              type: boolean
                             networkName:
                               type: string
+                          required:
+                          - networkName
                           type: object
                         name:
                           type: string
+                        pod:
+                          properties:
+                            vmIPv6NetworkCIDR:
+                              type: string
+                            vmNetworkCIDR:
+                              type: string
+                          type: object
+                      required:
+                      - name
                       type: object
                     type: array
                   volumes:
