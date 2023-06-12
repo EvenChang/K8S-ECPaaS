@@ -8,8 +8,17 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 type DataVolumeBlankImage struct{}
 
+// DataVolumeSourceImage provides the parameters to create a Data Volume from an existing Image
+type DataVolumeSourceImage struct {
+	// The namespace of the source Image
+	Namespace string `json:"namespace"`
+	// The name of the source Image
+	Name string `json:"name"`
+}
+
 type DiskVolumeSource struct {
-	Blank *DataVolumeBlankImage `json:"blank,omitempty"`
+	Blank *DataVolumeBlankImage  `json:"blank,omitempty"`
+	Image *DataVolumeSourceImage `json:"image,omitempty"`
 }
 
 // DiskVolumeSpec defines the desired state of DiskVolume
