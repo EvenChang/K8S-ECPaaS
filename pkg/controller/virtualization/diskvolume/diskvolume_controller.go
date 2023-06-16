@@ -31,7 +31,6 @@ const (
 	controllerName        = "diskvolume-controller"
 	successSynced         = "Synced"
 	messageResourceSynced = "DiskVolume synced successfully"
-	pvcNamePrefix         = "tpl-"
 )
 
 // Reconciler reconciles a disk volume object
@@ -146,7 +145,7 @@ func (r *Reconciler) createPVC(dv_instance *virtzv1alpha1.DiskVolume, scName str
 	controller := true
 
 	pvc := &corev1.PersistentVolumeClaim{}
-	pvc.Name = pvcNamePrefix + dv_instance.Name
+	pvc.Name = dv_instance.Spec.PVCName
 	pvc.Namespace = dv_instance.Namespace
 	pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
 	pvc.Spec.Resources = corev1.ResourceRequirements{}
@@ -185,8 +184,10 @@ func (r *Reconciler) clonePVC(virtClient kubecli.KubevirtClient, dv_instance *vi
 			Kind: "DataVolume",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      dv_instance.Name,
-			Namespace: dv_instance.Namespace,
+			Name:        dv_instance.Spec.PVCName,
+			Namespace:   dv_instance.Namespace,
+			Annotations: dv_instance.Annotations,
+			Labels:      dv_instance.Labels,
 		},
 		Spec: cdiv1.DataVolumeSpec{
 			PVC: &corev1.PersistentVolumeClaimSpec{

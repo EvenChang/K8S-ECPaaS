@@ -33,6 +33,7 @@ const (
 	controllerName        = "virtualmachine-controller"
 	successSynced         = "Synced"
 	messageResourceSynced = "VirtualMachine synced successfully"
+	pvcNamePrefix         = "tpl-" // tpl: template
 )
 
 // Reconciler reconciles a cnat object
@@ -101,6 +102,52 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		klog.Infof("Adding finalizer for VirtualMachine %s/%s", req.Namespace, req.Name)
 		if err := r.addFinalizer(vm_instance); err != nil {
 			return ctrl.Result{}, err
+		}
+
+		// create disk volume
+		if vm_instance.Spec.DiskVolumeTemplates != nil {
+			klog.Infof("Creating DiskVolume for VirtualMachine %s/%s", req.Namespace, req.Name)
+
+			blockOwnerDeletion := true
+			controller := true
+			namespace := "default"
+
+			for _, diskVolumeTemplate := range vm_instance.Spec.DiskVolumeTemplates {
+				diskVolume := virtzv1alpha1.DiskVolume{}
+				diskVolume.Name = diskVolumeTemplate.Name
+				if diskVolumeTemplate.Namespace != "" {
+					namespace = diskVolumeTemplate.Namespace
+				}
+				diskVolume.Namespace = namespace
+				diskVolume.Annotations = diskVolumeTemplate.Annotations
+				diskVolume.Labels = diskVolumeTemplate.Labels
+				diskVolume.Spec.PVCName = pvcNamePrefix + diskVolumeTemplate.Name
+				diskVolume.Spec.Resources = diskVolumeTemplate.Spec.Resources
+				diskVolume.Spec.Source = diskVolumeTemplate.Spec.Source
+
+				// For check data volume status
+				if diskVolume.Annotations == nil {
+					diskVolume.Annotations = make(map[string]string)
+				}
+				diskVolume.Annotations["cdi.kubevirt.io/storage.deleteAfterCompletion"] = "false"
+
+				diskVolume.OwnerReferences = []metav1.OwnerReference{
+					{
+						APIVersion:         vm_instance.APIVersion,
+						Kind:               vm_instance.Kind,
+						Name:               vm_instance.Name,
+						UID:                vm_instance.UID,
+						Controller:         &controller,
+						BlockOwnerDeletion: &blockOwnerDeletion,
+					},
+				}
+
+				err := r.Create(rootCtx, &diskVolume)
+				if err != nil {
+					klog.Infof(err.Error())
+					return ctrl.Result{}, err
+				}
+			}
 		}
 
 		klog.Infof("Creating VirtualMachine %s/%s", req.Namespace, req.Name)
@@ -271,22 +318,32 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 	if virtzSpec.DiskVolumes != nil {
 		for _, volume := range virtzSpec.DiskVolumes {
 			newVolume := kvapi.Volume{
-				Name: "vol-" + volume,
+				Name: volume,
 				VolumeSource: kvapi.VolumeSource{
 					PersistentVolumeClaim: &kvapi.PersistentVolumeClaimVolumeSource{
 						PersistentVolumeClaimVolumeSource: corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: volume,
+							ClaimName: pvcNamePrefix + volume,
 						},
 					},
 				},
 			}
 			kvvmSpec.Template.Spec.Volumes = append(kvvmSpec.Template.Spec.Volumes, newVolume)
 
-			//FIXME: boot order needs to be configurable
-			bootorder := uint(1)
+			// check boot order from spec.diskvolumeTemplates label
+			bootorder := uint(0)
+			for _, diskVolumeTemplate := range virtzSpec.DiskVolumeTemplates {
+				if diskVolumeTemplate.Name == volume {
+					if diskVolumeTemplate.Labels != nil {
+						if diskVolumeTemplate.Labels["virtualization.ecpaas.io/bootorder"] == "1" {
+							bootorder = uint(1)
+						}
+					}
+				}
+			}
+
 			newDisk := kvapi.Disk{
 				BootOrder: &bootorder,
-				Name:      "vol-" + volume,
+				Name:      volume,
 				DiskDevice: kvapi.DiskDevice{
 					Disk: &kvapi.DiskTarget{
 						Bus: "virtio",

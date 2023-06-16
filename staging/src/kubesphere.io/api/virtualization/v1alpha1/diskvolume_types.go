@@ -44,7 +44,8 @@ type DiskVolumeStatus struct {
 
 // DiskVolume is the Schema for the diskvolumes API
 type DiskVolume struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +kubebuilder:pruning:PreserveUnknownFields
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   DiskVolumeSpec   `json:"spec,omitempty"`

@@ -12,15 +12,6 @@ import (
 
 const VirtualMachineFinalizer = "finalizers.virtualization.ecpaas.io/virtualmachine"
 
-type DiskVolumeTemplateSourceImage struct {
-	Name      string `json:"name,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
-}
-
-type DiskVolumeTemplateSource struct {
-	Image DiskVolumeTemplateSourceImage `json:"image,omitempty"`
-}
-
 type ResourceRequirements struct {
 	// Requests is a description of the initial vmi resources.
 	// Valid resource keys are "memory" and "cpu".
@@ -30,23 +21,6 @@ type ResourceRequirements struct {
 	// Valid resource keys are "memory" and "cpu".
 	// +optional
 	Limits v1.ResourceList `json:"limits,omitempty"`
-}
-
-type DiskVolumeTemplateSpec struct {
-	// Resources represents the minimum resources the volume should have.
-	Resources ResourceRequirements     `json:"resources,omitempty"`
-	Source    DiskVolumeTemplateSource `json:"source,omitempty"`
-}
-
-type DiskVolumeTemplateStatus struct {
-}
-
-type DiskVolumeTemplate struct {
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	// DiskVolumeSpec is the spec for a DiskVolume resource
-	Spec   DiskVolumeTemplateSpec   `json:"spec,omitempty"`
-	Status DiskVolumeTemplateStatus `json:"status,omitempty"`
 }
 
 type Cpu struct {
@@ -125,7 +99,7 @@ type Hardware struct {
 // VirtualMachineSpec defines the desired state of VirtualMachine
 type VirtualMachineSpec struct {
 	// DiskVolumeTemplate is the name of the DiskVolumeTemplate.
-	DiskVolumeTemplates []DiskVolumeTemplate `json:"diskVolumeTemplates,omitempty"`
+	DiskVolumeTemplates []DiskVolume `json:"diskVolumeTemplates,omitempty"`
 	// DiskVolume is the name of the DiskVolume.
 	DiskVolumes []string `json:"diskVolumes,omitempty"`
 	// Hardware is the hardware of the VirtualMachine.
