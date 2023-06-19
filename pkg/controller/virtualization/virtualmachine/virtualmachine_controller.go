@@ -387,14 +387,18 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 			}
 
 			newDisk := kvapi.Disk{
-				BootOrder: &bootorder,
-				Name:      volume,
+				Name: volume,
 				DiskDevice: kvapi.DiskDevice{
 					Disk: &kvapi.DiskTarget{
 						Bus: "virtio",
 					},
 				},
 			}
+
+			if bootorder == 1 {
+				newDisk.BootOrder = &bootorder
+			}
+
 			kvvmSpec.Template.Spec.Domain.Devices.Disks = append(kvvmSpec.Template.Spec.Domain.Devices.Disks, newDisk)
 		}
 	}
