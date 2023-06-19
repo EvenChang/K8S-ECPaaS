@@ -7,6 +7,7 @@ package virtualmachine
 import (
 	"context"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -20,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	snapv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -30,10 +32,11 @@ import (
 )
 
 const (
-	controllerName        = "virtualmachine-controller"
-	successSynced         = "Synced"
-	messageResourceSynced = "VirtualMachine synced successfully"
-	pvcNamePrefix         = "tpl-" // tpl: template
+	controllerName          = "virtualmachine-controller"
+	successSynced           = "Synced"
+	messageResourceSynced   = "VirtualMachine synced successfully"
+	pvcNamePrefix           = "tpl-" // tpl: template
+	volumeSnapshotClassName = "cstor-csi-disk"
 )
 
 // Reconciler reconciles a cnat object
@@ -70,6 +73,29 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	klog.V(2).Infof("Reconciling VirtualMachine %s/%s", req.Namespace, req.Name)
 
 	rootCtx := context.Background()
+
+	vsc := snapv1.VolumeSnapshotClass{}
+	if err := r.Get(rootCtx, client.ObjectKey{Name: volumeSnapshotClassName}, &vsc); err != nil {
+		if errors.IsNotFound(err) {
+			klog.Infof("VolumeSnapshotClass %s not found", volumeSnapshotClassName)
+		} else {
+			klog.Errorf("Failed to get VolumeSnapshotClass %s: %v", volumeSnapshotClassName, err)
+			return ctrl.Result{}, err
+		}
+	}
+	klog.V(2).Infof("VolumeSnapshotClass %s delete policy: %s", volumeSnapshotClassName, vsc.DeletionPolicy)
+
+	if vsc.DeletionPolicy != "Retain" {
+		klog.Infof("VolumeSnapshotClass %s delete policy is not Retain", volumeSnapshotClassName)
+		vsc_instance := vsc.DeepCopy()
+		vsc_instance.DeletionPolicy = "Retain"
+		if err := r.Update(rootCtx, vsc_instance); err != nil {
+			klog.Errorf("Failed to update VolumeSnapshotClass %s : %v", volumeSnapshotClassName, err)
+			return ctrl.Result{}, err
+		}
+		klog.Infof("VolumeSnapshotClass %s delete policy is updated to Retain", volumeSnapshotClassName)
+	}
+
 	vm := &virtzv1alpha1.VirtualMachine{}
 	if err := r.Get(rootCtx, req.NamespacedName, vm); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -165,6 +191,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if !vm_instance.Status.Ready {
 		klog.V(2).Infof("VirtualMachine %s/%s is not ready", req.Namespace, req.Name)
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	}
+
+	// delete volumesnapshotcontent
+	if vm_instance.Spec.DiskVolumeTemplates != nil {
+		for _, diskVolumeTemplate := range vm_instance.Spec.DiskVolumeTemplates {
+			volumesnapshotcontents := &snapv1.VolumeSnapshotContentList{}
+			if err := r.List(rootCtx, volumesnapshotcontents); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			for _, volumesnapshotcontent := range volumesnapshotcontents.Items {
+				if strings.HasPrefix(volumesnapshotcontent.Spec.VolumeSnapshotRef.Name, pvcNamePrefix+diskVolumeTemplate.Name) {
+					klog.Infof("Deleting VolumeSnapshotContent %s", volumesnapshotcontent.Name)
+					if err := r.Delete(rootCtx, &volumesnapshotcontent); err != nil {
+						return ctrl.Result{}, err
+					}
+				}
+			}
+		}
 	}
 
 	if !reflect.DeepEqual(vm, vm_instance) {
