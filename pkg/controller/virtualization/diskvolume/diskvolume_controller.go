@@ -31,6 +31,7 @@ const (
 	controllerName        = "diskvolume-controller"
 	successSynced         = "Synced"
 	messageResourceSynced = "DiskVolume synced successfully"
+	pvcNamePrefix         = "tpl-" // tpl: template
 )
 
 // Reconciler reconciles a disk volume object
@@ -145,7 +146,11 @@ func (r *Reconciler) createPVC(dv_instance *virtzv1alpha1.DiskVolume, scName str
 	controller := true
 
 	pvc := &corev1.PersistentVolumeClaim{}
-	pvc.Name = dv_instance.Spec.PVCName
+	if dv_instance.Spec.PVCName != "" {
+		pvc.Name = dv_instance.Spec.PVCName
+	} else {
+		pvc.Name = pvcNamePrefix + dv_instance.Name
+	}
 	pvc.Namespace = dv_instance.Namespace
 	pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
 	pvc.Spec.Resources = corev1.ResourceRequirements{}
