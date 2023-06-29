@@ -36,6 +36,11 @@ spec:
           spec:
             description: ImageTemplateSpec defines the desired state of ImageTemplate
             properties:
+              attributes:
+                properties:
+                  public:
+                    type: boolean
+                type: object
               resources:
                 description: Resources represents the minimum resources the volume
                   should have.
@@ -64,6 +69,20 @@ spec:
               source:
                 description: Source is the source of the volume.
                 properties:
+                  clone:
+                    description: DataVolumeSourcePVC provides the parameters to create
+                      a Data Volume from an existing PVC
+                    properties:
+                      name:
+                        description: The name of the source PVC
+                        type: string
+                      namespace:
+                        description: The namespace of the source PVC
+                        type: string
+                    required:
+                    - name
+                    - namespace
+                    type: object
                   http:
                     description: DataVolumeSourceHTTP can be either an http or https
                       endpoint, with an optional basic auth user name and password,
