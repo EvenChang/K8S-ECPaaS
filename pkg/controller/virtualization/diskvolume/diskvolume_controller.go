@@ -102,6 +102,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	status := &dv_instance.Status
 	if !status.Created {
+
+		if dv_instance.Spec.PVCName == "" {
+			dv_instance.Spec.PVCName = pvcNamePrefix + dv_instance.Name
+		}
+
 		// create pvc for blank disk
 		if dv_instance.Spec.Source.Blank != nil {
 			err := r.createPVC(dv_instance, scName)
@@ -118,6 +123,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		status.Created = true
+
+		if dv_instance.OwnerReferences != nil {
+			status.Owner = dv_instance.OwnerReferences[0].Name
+		}
 
 	}
 
@@ -146,11 +155,7 @@ func (r *Reconciler) createPVC(dv_instance *virtzv1alpha1.DiskVolume, scName str
 	controller := true
 
 	pvc := &corev1.PersistentVolumeClaim{}
-	if dv_instance.Spec.PVCName != "" {
-		pvc.Name = dv_instance.Spec.PVCName
-	} else {
-		pvc.Name = pvcNamePrefix + dv_instance.Name
-	}
+	pvc.Name = dv_instance.Spec.PVCName
 	pvc.Namespace = dv_instance.Namespace
 	pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
 	pvc.Spec.Resources = corev1.ResourceRequirements{}
