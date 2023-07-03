@@ -31,6 +31,7 @@ const (
 	controllerName        = "diskvolume-controller"
 	successSynced         = "Synced"
 	messageResourceSynced = "DiskVolume synced successfully"
+	pvcNamePrefix         = "tpl-" // tpl: template
 )
 
 // Reconciler reconciles a disk volume object
@@ -101,6 +102,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	status := &dv_instance.Status
 	if !status.Created {
+
+		if dv_instance.Spec.PVCName == "" {
+			dv_instance.Spec.PVCName = pvcNamePrefix + dv_instance.Name
+		}
+
 		// create pvc for blank disk
 		if dv_instance.Spec.Source.Blank != nil {
 			err := r.createPVC(dv_instance, scName)
@@ -117,6 +123,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		status.Created = true
+
+		if dv_instance.OwnerReferences != nil {
+			status.Owner = dv_instance.OwnerReferences[0].Name
+		}
 
 	}
 
