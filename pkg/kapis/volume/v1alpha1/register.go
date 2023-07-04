@@ -11,6 +11,7 @@ import (
 	restfulspec "github.com/emicklei/go-restful-openapi"
 	"github.com/minio/minio-go/v7"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes"
 	"kubesphere.io/kubesphere/pkg/api"
 	"kubesphere.io/kubesphere/pkg/apiserver/runtime"
 	kubesphere "kubesphere.io/kubesphere/pkg/client/clientset/versioned"
@@ -28,9 +29,9 @@ func Resource(resource string) schema.GroupResource {
 	return GroupVersion.WithResource(resource).GroupResource()
 }
 
-func AddToContainer(container *restful.Container, minioClient *minio.Client, ksclient kubesphere.Interface) error {
+func AddToContainer(container *restful.Container, minioClient *minio.Client, k8sclient kubernetes.Interface, ksclient kubesphere.Interface) error {
 	webservice := runtime.NewWebService(GroupVersion)
-	handler := newHandler(minioClient, ksclient)
+	handler := newHandler(minioClient, k8sclient, ksclient)
 
 	webservice.Route(webservice.GET("/upload/file/images").
 		To(handler.ListMinioObjects).

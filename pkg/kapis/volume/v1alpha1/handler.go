@@ -6,56 +6,67 @@ package v1
 
 import (
 	"context"
+	"strconv"
+	"time"
 
 	"github.com/emicklei/go-restful"
 	"github.com/minio/minio-go/v7"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
-	v1alpha1 "kubesphere.io/api/virtualization/v1alpha1"
 	"kubesphere.io/kubesphere/pkg/api"
 	kubesphere "kubesphere.io/kubesphere/pkg/client/clientset/versioned"
 	"kubesphere.io/kubesphere/pkg/server/errors"
-	"kubevirt.io/containerized-data-importer-api/pkg/apis/core/v1beta1"
 )
 
 var bucketName = "ecpaas-images"
 
 type handler struct {
 	minioClient *minio.Client
+	k8sclient   kubernetes.Interface
 	ksclient    kubesphere.Interface
 }
 
-func newHandler(minioClient *minio.Client, ksclient kubesphere.Interface) *handler {
+func newHandler(minioClient *minio.Client, k8sclient kubernetes.Interface, ksclient kubesphere.Interface) *handler {
 	return &handler{
 		minioClient: minioClient,
+		k8sclient:   k8sclient,
 		ksclient:    ksclient,
 	}
 }
 
 type ObjectStatus struct {
-	Status  int `json:"status"`
-	Data    ObjectStatusData
-	Message string `json:"message"`
+	// If object exisit or not
+	FileHas bool `json:"fileHas"`
 }
 
 type ObjectStatusData struct {
-	// If object exisit or not
-	FileHas bool `json:"fileHas"`
 	// Object name
 	Name         string `json:"name,omitempty"`
+	Location     string `json:"location,omitempty"`
 	LastModified string `json:"lastModified,omitempty"`
 	Size         int64  `json:"size,omitempty"`
 }
 
 type ImagesList struct {
-	Image []string `json:"images"`
+	Image []ObjectStatusData `json:"images"`
 }
 
 func (h *handler) ListMinioObjects(request *restful.Request, response *restful.Response) {
 
 	images := ImagesList{}
+
+	namespace := "kubesphere-system"
+	serviceName := "minio"
+
+	service, err := h.k8sclient.CoreV1().Services(namespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
+	if err != nil {
+		klog.Warning("Failed to get Service: ", err)
+		return
+	}
+
+	ip := service.Spec.ClusterIP
+	port := service.Spec.Ports[0].Port
 
 	objectCh := h.minioClient.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{})
 	for object := range objectCh {
@@ -63,7 +74,20 @@ func (h *handler) ListMinioObjects(request *restful.Request, response *restful.R
 			api.HandleInternalError(response, request, object.Err)
 			return
 		}
-		images.Image = append(images.Image, object.Key)
+
+		objInfo, err := h.minioClient.StatObject(context.Background(), bucketName, object.Key, minio.StatObjectOptions{})
+		if err != nil {
+			klog.Warning(err)
+			continue
+		}
+
+		data := ObjectStatusData{}
+		data.Name = objInfo.Key
+		// "location": "http://minio.kubesphere-system.svc:9000/ecpaas-images",
+		data.Location = "http://" + ip + ":" + strconv.Itoa(int(port)) + "/" + bucketName
+		data.LastModified = objInfo.LastModified.Format(time.RFC3339)
+		data.Size = objInfo.Size
+		images.Image = append(images.Image, data)
 	}
 
 	response.WriteAsJson(images)
@@ -74,22 +98,11 @@ func (h *handler) GetMinioObjectStatus(request *restful.Request, response *restf
 	imageName := request.PathParameter("imageName")
 	status := ObjectStatus{}
 
-	objInfo, err := h.minioClient.StatObject(context.Background(), bucketName, imageName, minio.StatObjectOptions{})
+	_, err := h.minioClient.StatObject(context.Background(), bucketName, imageName, minio.StatObjectOptions{})
 	if err != nil {
-		status.Status = 400
-		status.Data = ObjectStatusData{
-			FileHas: false,
-		}
-		status.Message = err.Error()
+		status.FileHas = false
 	} else {
-		status.Status = 200
-		status.Data = ObjectStatusData{
-			FileHas:      true,
-			Name:         imageName,
-			LastModified: objInfo.LastModified.String(),
-			Size:         objInfo.Size,
-		}
-		status.Message = "success"
+		status.FileHas = true
 	}
 
 	response.WriteAsJson(status)
@@ -120,10 +133,6 @@ func (h *handler) UploadMinioObject(request *restful.Request, response *restful.
 	}
 	filesize := file.(Sizer).Size()
 
-	name := request.Request.FormValue("name")
-	namespace := request.Request.FormValue("namespace")
-	storage := request.Request.FormValue("storage")
-
 	request.Request.MultipartReader()
 
 	uploadInfo, err := h.minioClient.PutObject(context.Background(), bucketName, header.Filename,
@@ -131,40 +140,6 @@ func (h *handler) UploadMinioObject(request *restful.Request, response *restful.
 
 	if err != nil {
 		api.HandleInternalError(response, request, err)
-		return
-	}
-
-	// After finished upload image process, create the ImageTemplete resource for kubevirt dataVolume use.
-
-	if namespace == "" {
-		namespace = "default"
-	}
-
-	imageTeplate := &v1alpha1.ImageTemplate{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: v1alpha1.SchemeGroupVersion.String(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: v1alpha1.ImageTemplateSpec{
-			Resources: v1alpha1.ResourceRequirements{
-				Requests: v1.ResourceList{
-					v1.ResourceStorage: resource.MustParse(storage),
-				},
-			},
-			Source: v1alpha1.ImageTemplateSource{
-				HTTP: &v1beta1.DataVolumeSourceHTTP{
-					URL: uploadInfo.Location,
-				},
-			},
-		},
-	}
-
-	_, err = h.ksclient.VirtualizationV1alpha1().ImageTemplates(namespace).Create(context.Background(), imageTeplate, metav1.CreateOptions{})
-
-	if err != nil {
-		klog.Info("Create ImageTemplates resource failed. ", err)
 		return
 	}
 
