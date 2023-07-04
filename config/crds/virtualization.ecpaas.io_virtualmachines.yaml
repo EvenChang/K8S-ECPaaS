@@ -42,12 +42,28 @@ spec:
               diskVolumeTemplates:
                 description: DiskVolumeTemplate is the name of the DiskVolumeTemplate.
                 items:
+                  description: DiskVolume is the Schema for the diskvolumes API
                   properties:
+                    apiVersion:
+                      description: 'APIVersion defines the versioned schema of this
+                        representation of an object. Servers should convert recognized
+                        schemas to the latest internal value, and may reject unrecognized
+                        values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+                      type: string
+                    kind:
+                      description: 'Kind is a string value representing the REST resource
+                        this object represents. Servers may infer this from the endpoint
+                        the client submits requests to. Cannot be updated. In CamelCase.
+                        More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                      type: string
                     metadata:
                       type: object
+                      x-kubernetes-preserve-unknown-fields: true
                     spec:
-                      description: DiskVolumeSpec is the spec for a DiskVolume resource
+                      description: DiskVolumeSpec defines the desired state of DiskVolume
                       properties:
+                        pvcName:
+                          type: string
                         resources:
                           description: Resources represents the minimum resources
                             the volume should have.
@@ -76,17 +92,40 @@ spec:
                               type: object
                           type: object
                         source:
+                          description: Source is the source of the volume.
                           properties:
+                            blank:
+                              type: object
                             image:
+                              description: DataVolumeSourceImage provides the parameters
+                                to create a Data Volume from an existing Image
                               properties:
                                 name:
+                                  description: The name of the source Image
                                   type: string
                                 namespace:
+                                  description: The namespace of the source Image
                                   type: string
+                              required:
+                              - name
+                              - namespace
                               type: object
                           type: object
+                      required:
+                      - source
                       type: object
                     status:
+                      description: DiskVolumeStatus defines the observed state of
+                        DiskVolume
+                      properties:
+                        created:
+                          type: boolean
+                        owner:
+                          type: string
+                        ready:
+                          type: boolean
+                        target:
+                          type: string
                       type: object
                   type: object
                 type: array

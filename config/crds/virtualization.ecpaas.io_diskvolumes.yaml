@@ -68,6 +68,20 @@ spec:
                 properties:
                   blank:
                     type: object
+                  image:
+                    description: DataVolumeSourceImage provides the parameters to
+                      create a Data Volume from an existing Image
+                    properties:
+                      name:
+                        description: The name of the source Image
+                        type: string
+                      namespace:
+                        description: The namespace of the source Image
+                        type: string
+                    required:
+                    - name
+                    - namespace
+                    type: object
                 type: object
             required:
             - source

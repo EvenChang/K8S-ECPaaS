@@ -7,6 +7,7 @@ package virtualmachine
 import (
 	"context"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -20,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	snapv1 "github.com/kubernetes-csi/external-snapshotter/client/v4/apis/volumesnapshot/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -30,9 +32,11 @@ import (
 )
 
 const (
-	controllerName        = "virtualmachine-controller"
-	successSynced         = "Synced"
-	messageResourceSynced = "VirtualMachine synced successfully"
+	controllerName          = "virtualmachine-controller"
+	successSynced           = "Synced"
+	messageResourceSynced   = "VirtualMachine synced successfully"
+	pvcNamePrefix           = "tpl-" // tpl: template
+	volumeSnapshotClassName = "cstor-csi-disk"
 )
 
 // Reconciler reconciles a cnat object
@@ -69,6 +73,29 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	klog.V(2).Infof("Reconciling VirtualMachine %s/%s", req.Namespace, req.Name)
 
 	rootCtx := context.Background()
+
+	vsc := snapv1.VolumeSnapshotClass{}
+	if err := r.Get(rootCtx, client.ObjectKey{Name: volumeSnapshotClassName}, &vsc); err != nil {
+		if errors.IsNotFound(err) {
+			klog.Infof("VolumeSnapshotClass %s not found", volumeSnapshotClassName)
+		} else {
+			klog.Errorf("Failed to get VolumeSnapshotClass %s: %v", volumeSnapshotClassName, err)
+			return ctrl.Result{}, err
+		}
+	}
+	klog.V(2).Infof("VolumeSnapshotClass %s delete policy: %s", volumeSnapshotClassName, vsc.DeletionPolicy)
+
+	if vsc.DeletionPolicy != "Retain" {
+		klog.Infof("VolumeSnapshotClass %s delete policy is not Retain", volumeSnapshotClassName)
+		vsc_instance := vsc.DeepCopy()
+		vsc_instance.DeletionPolicy = "Retain"
+		if err := r.Update(rootCtx, vsc_instance); err != nil {
+			klog.Errorf("Failed to update VolumeSnapshotClass %s : %v", volumeSnapshotClassName, err)
+			return ctrl.Result{}, err
+		}
+		klog.Infof("VolumeSnapshotClass %s delete policy is updated to Retain", volumeSnapshotClassName)
+	}
+
 	vm := &virtzv1alpha1.VirtualMachine{}
 	if err := r.Get(rootCtx, req.NamespacedName, vm); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -103,6 +130,52 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, err
 		}
 
+		// create disk volume
+		if vm_instance.Spec.DiskVolumeTemplates != nil {
+			klog.Infof("Creating DiskVolume for VirtualMachine %s/%s", req.Namespace, req.Name)
+
+			blockOwnerDeletion := true
+			controller := true
+			namespace := "default"
+
+			for _, diskVolumeTemplate := range vm_instance.Spec.DiskVolumeTemplates {
+				diskVolume := virtzv1alpha1.DiskVolume{}
+				diskVolume.Name = diskVolumeTemplate.Name
+				if diskVolumeTemplate.Namespace != "" {
+					namespace = diskVolumeTemplate.Namespace
+				}
+				diskVolume.Namespace = namespace
+				diskVolume.Annotations = diskVolumeTemplate.Annotations
+				diskVolume.Labels = diskVolumeTemplate.Labels
+				diskVolume.Spec.PVCName = pvcNamePrefix + diskVolumeTemplate.Name
+				diskVolume.Spec.Resources = diskVolumeTemplate.Spec.Resources
+				diskVolume.Spec.Source = diskVolumeTemplate.Spec.Source
+
+				// For check data volume status
+				if diskVolume.Annotations == nil {
+					diskVolume.Annotations = make(map[string]string)
+				}
+				diskVolume.Annotations["cdi.kubevirt.io/storage.deleteAfterCompletion"] = "false"
+
+				diskVolume.OwnerReferences = []metav1.OwnerReference{
+					{
+						APIVersion:         vm_instance.APIVersion,
+						Kind:               vm_instance.Kind,
+						Name:               vm_instance.Name,
+						UID:                vm_instance.UID,
+						Controller:         &controller,
+						BlockOwnerDeletion: &blockOwnerDeletion,
+					},
+				}
+
+				err := r.Create(rootCtx, &diskVolume)
+				if err != nil {
+					klog.Infof(err.Error())
+					return ctrl.Result{}, err
+				}
+			}
+		}
+
 		klog.Infof("Creating VirtualMachine %s/%s", req.Namespace, req.Name)
 		err := createVirtualMachine(virtClient, vm_instance)
 
@@ -118,6 +191,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if !vm_instance.Status.Ready {
 		klog.V(2).Infof("VirtualMachine %s/%s is not ready", req.Namespace, req.Name)
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	}
+
+	// delete volumesnapshotcontent
+	if vm_instance.Spec.DiskVolumeTemplates != nil {
+		for _, diskVolumeTemplate := range vm_instance.Spec.DiskVolumeTemplates {
+			volumesnapshotcontents := &snapv1.VolumeSnapshotContentList{}
+			if err := r.List(rootCtx, volumesnapshotcontents); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			for _, volumesnapshotcontent := range volumesnapshotcontents.Items {
+				if strings.HasPrefix(volumesnapshotcontent.Spec.VolumeSnapshotRef.Name, pvcNamePrefix+diskVolumeTemplate.Name) {
+					klog.Infof("Deleting VolumeSnapshotContent %s", volumesnapshotcontent.Name)
+					if err := r.Delete(rootCtx, &volumesnapshotcontent); err != nil {
+						return ctrl.Result{}, err
+					}
+				}
+			}
+		}
 	}
 
 	if !reflect.DeepEqual(vm, vm_instance) {
@@ -271,28 +363,42 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 	if virtzSpec.DiskVolumes != nil {
 		for _, volume := range virtzSpec.DiskVolumes {
 			newVolume := kvapi.Volume{
-				Name: "vol-" + volume,
+				Name: volume,
 				VolumeSource: kvapi.VolumeSource{
 					PersistentVolumeClaim: &kvapi.PersistentVolumeClaimVolumeSource{
 						PersistentVolumeClaimVolumeSource: corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: volume,
+							ClaimName: pvcNamePrefix + volume,
 						},
 					},
 				},
 			}
 			kvvmSpec.Template.Spec.Volumes = append(kvvmSpec.Template.Spec.Volumes, newVolume)
 
-			//FIXME: boot order needs to be configurable
-			bootorder := uint(1)
+			// check boot order from spec.diskvolumeTemplates label
+			bootorder := uint(0)
+			for _, diskVolumeTemplate := range virtzSpec.DiskVolumeTemplates {
+				if diskVolumeTemplate.Name == volume {
+					if diskVolumeTemplate.Labels != nil {
+						if diskVolumeTemplate.Labels["virtualization.ecpaas.io/bootorder"] == "1" {
+							bootorder = uint(1)
+						}
+					}
+				}
+			}
+
 			newDisk := kvapi.Disk{
-				BootOrder: &bootorder,
-				Name:      "vol-" + volume,
+				Name: volume,
 				DiskDevice: kvapi.DiskDevice{
 					Disk: &kvapi.DiskTarget{
 						Bus: "virtio",
 					},
 				},
 			}
+
+			if bootorder == 1 {
+				newDisk.BootOrder = &bootorder
+			}
+
 			kvvmSpec.Template.Spec.Domain.Devices.Disks = append(kvvmSpec.Template.Spec.Domain.Devices.Disks, newDisk)
 		}
 	}
