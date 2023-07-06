@@ -11,6 +11,7 @@ import (
 
 	"github.com/emicklei/go-restful"
 	"github.com/minio/minio-go/v7"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
@@ -55,18 +56,30 @@ type ImagesList struct {
 func (h *handler) ListMinioObjects(request *restful.Request, response *restful.Response) {
 
 	images := ImagesList{}
+	minioServiceName := "minio"
 
-	namespace := "kubesphere-system"
-	serviceName := "minio"
-
-	service, err := h.k8sclient.CoreV1().Services(namespace).Get(context.TODO(), serviceName, metav1.GetOptions{})
+	serviceList, err := h.k8sclient.CoreV1().Services("").List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		klog.Warning("Failed to get Service: ", err)
+		klog.Warning("Failed to get service: ", err)
 		return
 	}
 
-	ip := service.Spec.ClusterIP
-	port := service.Spec.Ports[0].Port
+	var minioService *v1.Service
+
+	for _, service := range serviceList.Items {
+		if service.Name == minioServiceName {
+			minioService = &service
+			break
+		}
+	}
+
+	if minioService == nil {
+		klog.Warning("Cannot find the minio service ", err)
+		return
+	}
+
+	ip := minioService.Spec.ClusterIP
+	port := minioService.Spec.Ports[0].Port
 
 	objectCh := h.minioClient.ListObjects(context.Background(), bucketName, minio.ListObjectsOptions{})
 	for object := range objectCh {
