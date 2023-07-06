@@ -278,7 +278,6 @@ func (s *APIServer) installKubeSphereAPIs(stopCh <-chan struct{}) {
 	urlruntime.Must(gatewayv1alpha1.AddToContainer(s.container, s.Config.GatewayOptions, s.RuntimeCache, s.RuntimeClient, s.InformerFactory, s.KubernetesClient.Kubernetes(), s.LoggingClient))
 	// accton extension
 	urlruntime.Must(vpcv1.AddToContainer(s.container, s.InformerFactory, s.KubernetesClient.Kubernetes(), s.KubernetesClient.KubeSphere()))
-	// kubevirt extension
 	urlruntime.Must(volumev1alpha1.AddToContainer(s.container, s.MinioClient, s.KubernetesClient.Kubernetes(), s.KubernetesClient.KubeSphere()))
 }
 
