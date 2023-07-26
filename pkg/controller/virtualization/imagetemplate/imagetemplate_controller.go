@@ -105,13 +105,26 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 						Requests: imageTemplate.Spec.Resources.Requests,
 					},
 				},
-				Source: &cdiv1.DataVolumeSource{
-					HTTP: &cdiv1.DataVolumeSourceHTTP{
-						URL: imageTemplate.Spec.Source.HTTP.URL,
-					},
-				},
 			},
 		}
+
+		if imageTemplate.Spec.Source.HTTP != nil {
+			dv.Spec.Source = &cdiv1.DataVolumeSource{
+				HTTP: &cdiv1.DataVolumeSourceHTTP{
+					URL: imageTemplate.Spec.Source.HTTP.URL,
+				},
+			}
+		}
+
+		if imageTemplate.Spec.Source.Clone != nil {
+			dv.Spec.Source = &cdiv1.DataVolumeSource{
+				PVC: &cdiv1.DataVolumeSourcePVC{
+					Name:      imageTemplate.Spec.Source.Clone.Name,
+					Namespace: imageTemplate.Spec.Source.Clone.Namespace,
+				},
+			}
+		}
+
 		dv.OwnerReferences = []metav1.OwnerReference{
 			{
 				APIVersion:         imageTemplate.APIVersion,

@@ -11,11 +11,17 @@ import (
 
 // ImageTemplateSource defines the source of the image.
 type ImageTemplateSource struct {
-	HTTP *cdiv1.DataVolumeSourceHTTP `json:"http,omitempty"`
+	HTTP  *cdiv1.DataVolumeSourceHTTP `json:"http,omitempty"`
+	Clone *cdiv1.DataVolumeSourcePVC  `json:"clone,omitempty"`
+}
+
+type ImageTemplateAttributes struct {
+	Public bool `json:"public,omitempty"`
 }
 
 // ImageTemplateSpec defines the desired state of ImageTemplate
 type ImageTemplateSpec struct {
+	Attributes ImageTemplateAttributes `json:"attributes,omitempty"`
 	// Resources represents the minimum resources the volume should have.
 	Resources ResourceRequirements `json:"resources,omitempty"`
 	// Source is the source of the volume.
