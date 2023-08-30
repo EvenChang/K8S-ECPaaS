@@ -498,7 +498,7 @@ func createVirtualMachine(virtClient kubecli.KubevirtClient, virtzVM *virtzv1alp
 
 func deleteVirtualMachine(virtClient kubecli.KubevirtClient, namespace string, vm_instance *virtzv1alpha1.VirtualMachine) error {
 	err := virtClient.VirtualMachine(namespace).Delete(vm_instance.Name, &metav1.DeleteOptions{})
-	if err != nil {
+	if err != nil && !errors.IsNotFound(err) {
 		klog.Infof(err.Error())
 		return err
 	}
