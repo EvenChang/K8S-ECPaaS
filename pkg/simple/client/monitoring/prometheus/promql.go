@@ -201,7 +201,7 @@ var promQLTemplates = map[string]string{
 	"workload_net_bytes_transmitted":   `namespace:workload_net_bytes_transmitted:sum_irate{$1}`,
 	"workload_net_bytes_received":      `namespace:workload_net_bytes_received:sum_irate{$1}`,
 	"workload_net_packets_transmitted": `namespace:workload_net_packets_transmitted:sum_irate{$1}`,
-  "workload_net_packets_received":    `namespace:workload_net_packets_received:sum_irate{$1}`,
+	"workload_net_packets_received":    `namespace:workload_net_packets_received:sum_irate{$1}`,
 
 	"workload_deployment_replica":                     `label_join(sum (label_join(label_replace(kube_deployment_spec_replicas{$2}, "owner_kind", "Deployment", "", ""), "workload", "", "deployment")) by (namespace, owner_kind, workload), "workload", ":", "owner_kind", "workload")`,
 	"workload_deployment_replica_available":           `label_join(sum (label_join(label_replace(kube_deployment_status_replicas_available{$2}, "owner_kind", "Deployment", "", ""), "workload", "", "deployment")) by (namespace, owner_kind, workload), "workload", ":", "owner_kind", "workload")`,
