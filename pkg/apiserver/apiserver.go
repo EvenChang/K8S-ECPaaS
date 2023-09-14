@@ -516,6 +516,12 @@ func (s *APIServer) waitForResourceSync(ctx context.Context) error {
 			"vpcnetworks",
 			"vpcsubnets",
 		},
+		// Virtualization
+		{Group: "virtualization.ecpaas.io", Version: "v1alpha1"}: {
+			"diskvolumes",
+			"imagetemplates",
+			"virtualmachines",
+		},
 	}
 
 	// skip caching devops resources if devops not enabled

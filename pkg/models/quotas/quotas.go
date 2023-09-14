@@ -23,8 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/informers"
 	"k8s.io/klog"
-
 	"kubesphere.io/kubesphere/pkg/api"
+	ksinformers "kubesphere.io/kubesphere/pkg/client/informers/externalversions"
 )
 
 const (
@@ -38,6 +38,9 @@ const (
 	jobsKey                   = "count/jobs.batch"
 	cronJobsKey               = "count/cronjobs.batch"
 	s2iBuilders               = "count/s2ibuilders.devops.kubesphere.io"
+	virtualmachinesKey        = "count/virtualmachines.virtualization.ecpaas.io"
+	imagetemplatesKey         = "count/imagetemplates.virtualization.ecpaas.io"
+	diskvolumesKey            = "count/diskvolumes.virtualization.ecpaas.io"
 )
 
 var supportedResources = map[string]schema.GroupVersionResource{
@@ -53,22 +56,49 @@ var supportedResources = map[string]schema.GroupVersionResource{
 	s2iBuilders:               {Group: "devops.kubesphere.io", Version: "v1alpha1", Resource: "s2ibuilders"},
 }
 
+var supportedVirtualizationResources = map[string]schema.GroupVersionResource{
+	virtualmachinesKey: {Group: "virtualization.ecpaas.io", Version: "v1alpha1", Resource: "virtualmachines"},
+	imagetemplatesKey:  {Group: "virtualization.ecpaas.io", Version: "v1alpha1", Resource: "imagetemplates"},
+	diskvolumesKey:     {Group: "virtualization.ecpaas.io", Version: "v1alpha1", Resource: "diskvolumes"},
+}
+
 type ResourceQuotaGetter interface {
 	GetClusterQuota() (*api.ResourceQuota, error)
 	GetNamespaceQuota(namespace string) (*api.NamespacedResourceQuota, error)
+	GetVirtualizationNamespaceQuota(namespace string) (*api.NamespacedResourceQuota, error)
 }
 
 type resourceQuotaGetter struct {
-	informers informers.SharedInformerFactory
+	k8sInformers        informers.SharedInformerFactory
+	kubesphereInformers ksinformers.SharedInformerFactory
 }
 
-func NewResourceQuotaGetter(informers informers.SharedInformerFactory) ResourceQuotaGetter {
-	return &resourceQuotaGetter{informers: informers}
+func NewResourceQuotaGetter(k8sInformers informers.SharedInformerFactory, kubesphereInformers ksinformers.SharedInformerFactory) ResourceQuotaGetter {
+	return &resourceQuotaGetter{
+		k8sInformers:        k8sInformers,
+		kubesphereInformers: kubesphereInformers,
+	}
 }
 
 func (c *resourceQuotaGetter) getUsage(namespace, resource string) (int, error) {
 
-	genericInformer, err := c.informers.ForResource(supportedResources[resource])
+	genericInformer, err := c.k8sInformers.ForResource(supportedResources[resource])
+	if err != nil {
+		// we deliberately ignore error if trying to get non existed resource
+		return 0, nil
+	}
+
+	result, err := genericInformer.Lister().ByNamespace(namespace).List(labels.Everything())
+	if err != nil {
+		return 0, err
+	}
+
+	return len(result), nil
+}
+
+func (c *resourceQuotaGetter) getVirtualizationUsage(namespace, resource string) (int, error) {
+
+	genericInformer, err := c.kubesphereInformers.ForResource(supportedVirtualizationResources[resource])
 	if err != nil {
 		// we deliberately ignore error if trying to get non existed resource
 		return 0, nil
@@ -150,6 +180,55 @@ func (c *resourceQuotaGetter) GetNamespaceQuota(namespace string) (*api.Namespac
 
 }
 
+func (c *resourceQuotaGetter) GetVirtualizationNamespaceQuota(namespace string) (*api.NamespacedResourceQuota, error) {
+	quota, err := c.getNamespaceResourceQuota(namespace)
+	if err != nil {
+		klog.Error(err)
+		return nil, err
+	}
+	if quota == nil {
+		quota = &v1.ResourceQuotaStatus{Hard: make(v1.ResourceList), Used: make(v1.ResourceList)}
+	}
+
+	var resourceQuotaLeft = v1.ResourceList{}
+
+	for key, hardLimit := range quota.Hard {
+		if used, ok := quota.Used[key]; ok {
+			left := hardLimit.DeepCopy()
+			left.Sub(used)
+			if hardLimit.Cmp(used) < 0 {
+				left = resource.MustParse("0")
+			}
+
+			resourceQuotaLeft[key] = left
+		}
+	}
+
+	// add extra quota usage, cause user may not specify them
+	for key := range supportedVirtualizationResources {
+		// only add them when they don't exist in quotastatus
+		if _, ok := quota.Used[v1.ResourceName(key)]; !ok {
+			used, err := c.getVirtualizationUsage(namespace, key)
+			if err != nil {
+				klog.Error(err)
+				return nil, err
+			}
+
+			quota.Used[v1.ResourceName(key)] = *(resource.NewQuantity(int64(used), resource.DecimalSI))
+		}
+	}
+
+	var result = api.NamespacedResourceQuota{
+		Namespace: namespace,
+	}
+	result.Data.Hard = quota.Hard
+	result.Data.Used = quota.Used
+	result.Data.Left = resourceQuotaLeft
+
+	return &result, nil
+
+}
+
 func updateNamespaceQuota(tmpResourceList, resourceList v1.ResourceList) {
 	if tmpResourceList == nil {
 		tmpResourceList = resourceList
@@ -166,7 +245,7 @@ func updateNamespaceQuota(tmpResourceList, resourceList v1.ResourceList) {
 }
 
 func (c *resourceQuotaGetter) getNamespaceResourceQuota(namespace string) (*v1.ResourceQuotaStatus, error) {
-	resourceQuotaLister := c.informers.Core().V1().ResourceQuotas().Lister()
+	resourceQuotaLister := c.k8sInformers.Core().V1().ResourceQuotas().Lister()
 	quotaList, err := resourceQuotaLister.ResourceQuotas(namespace).List(labels.Everything())
 	if err != nil {
 		klog.Error(err)
