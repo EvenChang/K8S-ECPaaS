@@ -78,6 +78,7 @@ type reqParams struct {
 	namespaceName             string
 	workloadKind              string
 	workloadName              string
+	virtualmachineName        string
 	podName                   string
 	containerName             string
 	pvcName                   string
@@ -144,6 +145,7 @@ func parseRequestParams(req *restful.Request) reqParams {
 	r.workloadKind = req.PathParameter("kind")
 	r.nodeName = req.PathParameter("node")
 	r.workloadName = req.PathParameter("workload")
+	r.virtualmachineName = req.PathParameter("vm")
 	//will be overide if "pod" in the path parameter.
 	r.podName = req.QueryParameter("pod")
 	r.podName = req.PathParameter("pod")
@@ -296,6 +298,17 @@ func (h handler) makeQueryOptions(r reqParams, lvl monitoring.Level) (q queryOpt
 			WorkloadKind:   r.workloadKind,
 		}
 		q.namedMetrics = model.WorkloadMetrics
+
+	case monitoring.LevelVirtualmachine:
+		q.identifier = model.IdentifierVirtualmachine
+		q.option = monitoring.VirtualmachineOption{
+			NamespacedResourcesFilter: r.namespacedResourcesFilter,
+			ResourceFilter:            r.resourceFilter,
+			NodeName:                  r.nodeName,
+			NamespaceName:             r.namespaceName,
+			VirtualmachineName:        r.virtualmachineName,
+		}
+		q.namedMetrics = model.VirtualmachineMetrics
 
 	case monitoring.LevelPod:
 		q.identifier = model.IdentifierPod

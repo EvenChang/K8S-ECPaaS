@@ -24,16 +24,17 @@ import (
 )
 
 const (
-	IdentifierNode        = "node"
-	IdentifierWorkspace   = "workspace"
-	IdentifierNamespace   = "namespace"
-	IdentifierWorkload    = "workload"
-	IdentifierPod         = "pod"
-	IdentifierContainer   = "container"
-	IdentifierPVC         = "persistentvolumeclaim"
-	IdentifierService     = "service"
-	IdentifierApplication = "application"
-	IdentifierIngress     = "ingress"
+	IdentifierNode           = "node"
+	IdentifierWorkspace      = "workspace"
+	IdentifierNamespace      = "namespace"
+	IdentifierWorkload       = "workload"
+	IdentifierVirtualmachine = "virtualmachine"
+	IdentifierPod            = "pod"
+	IdentifierContainer      = "container"
+	IdentifierPVC            = "persistentvolumeclaim"
+	IdentifierService        = "service"
+	IdentifierApplication    = "application"
+	IdentifierIngress        = "ingress"
 
 	OrderAscending  = "asc"
 	OrderDescending = "desc"

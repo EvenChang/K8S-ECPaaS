@@ -33,6 +33,7 @@ const (
 	LevelOpenpitrix
 	LevelWorkload
 	LevelService
+	LevelVirtualmachine
 	LevelPod
 	LevelContainer
 	LevelPVC
@@ -41,17 +42,18 @@ const (
 )
 
 var MeteringLevelMap = map[string]int{
-	"LevelCluster":     LevelCluster,
-	"LevelNode":        LevelNode,
-	"LevelWorkspace":   LevelWorkspace,
-	"LevelNamespace":   LevelNamespace,
-	"LevelApplication": LevelApplication,
-	"LevelWorkload":    LevelWorkload,
-	"LevelService":     LevelService,
-	"LevelPod":         LevelPod,
-	"LevelContainer":   LevelContainer,
-	"LevelPVC":         LevelPVC,
-	"LevelComponent":   LevelComponent,
+	"LevelCluster":           LevelCluster,
+	"LevelNode":              LevelNode,
+	"LevelWorkspace":         LevelWorkspace,
+	"LevelNamespace":         LevelNamespace,
+	"LevelApplication":       LevelApplication,
+	"LevelWorkload":          LevelWorkload,
+	"LevelService":           LevelService,
+	"LevelVirtualmachine":    LevelVirtualmachine,
+	"LevelPod":               LevelPod,
+	"LevelContainer":         LevelContainer,
+	"LevelPVC":               LevelPVC,
+	"LevelComponent":         LevelComponent,
 }
 
 type QueryOption interface {
@@ -75,6 +77,7 @@ type QueryOptions struct {
 	NamespaceName             string
 	WorkloadKind              string
 	WorkloadName              string
+	VirtualmachineName        string
 	PodName                   string
 	ContainerName             string
 	StorageClassName          string
@@ -235,6 +238,23 @@ func (so ServiceOption) Apply(o *QueryOptions) {
 	} else {
 		o.ResourceFilter = fmt.Sprintf(`pod=~"%s", namespace="%s"`, ".*", o.NamespaceName)
 	}
+}
+
+type VirtualmachineOption struct {
+	NamespacedResourcesFilter string
+	ResourceFilter            string
+	NodeName                  string
+	NamespaceName             string
+	VirtualmachineName        string
+}
+
+func (vo VirtualmachineOption) Apply(o *QueryOptions) {
+	o.Level = LevelVirtualmachine
+	o.NamespacedResourcesFilter = vo.NamespacedResourcesFilter
+	o.ResourceFilter = vo.ResourceFilter
+	o.NodeName = vo.NodeName
+	o.NamespaceName = vo.NamespaceName
+	o.VirtualmachineName = vo.VirtualmachineName
 }
 
 type PodOption struct {

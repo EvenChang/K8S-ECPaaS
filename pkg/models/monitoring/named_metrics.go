@@ -228,7 +228,7 @@ var WorkloadMetrics = []string{
 	"workload_net_bytes_transmitted",
 	"workload_net_bytes_received",
 	"workload_net_packets_transmitted",
-  "workload_net_packets_received",
+	"workload_net_packets_received",
 	"workload_deployment_replica",
 	"workload_deployment_replica_available",
 	"workload_statefulset_replica",
@@ -253,6 +253,19 @@ var ServiceMetrics = []string{
 	"meter_service_memory_usage_wo_cache",
 	"meter_service_net_bytes_transmitted",
 	"meter_service_net_bytes_received",
+}
+
+var VirtualmachineMetrics = []string{
+	"virtualmachine_cpu_usage",
+	"virtualmachine_memory_usage",
+	"virtualmachine_disk_read_iops",
+	"virtualmachine_disk_write_iops",
+	"virtualmachine_disk_read_traffic_bytes",
+	"virtualmachine_disk_write_traffic_bytes",
+	"virtualmachine_disk_read_times_ms",
+	"virtualmachine_disk_write_times_ms",
+	"virtualmachine_network_bytes_transmitted",
+	"virtualmachine_network_bytes_received",
 }
 
 var PodMetrics = []string{
