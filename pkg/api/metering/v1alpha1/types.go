@@ -42,30 +42,31 @@ const (
 )
 
 type Query struct {
-	Level            monitoring.Level
-	Operation        string
-	LabelSelector    string
-	Time             string
-	Start            string
-	End              string
-	Step             string
-	Target           string
-	Order            string
-	Page             string
-	Limit            string
-	MetricFilter     string
-	ResourceFilter   string
-	NodeName         string
-	WorkspaceName    string
-	NamespaceName    string
-	WorkloadKind     string
-	WorkloadName     string
-	PodName          string
-	Applications     string
-	Services         string
-	StorageClassName string
-	PVCFilter        string
-	Cluster          string
+	Level              monitoring.Level
+	Operation          string
+	LabelSelector      string
+	Time               string
+	Start              string
+	End                string
+	Step               string
+	Target             string
+	Order              string
+	Page               string
+	Limit              string
+	MetricFilter       string
+	ResourceFilter     string
+	NodeName           string
+	WorkspaceName      string
+	NamespaceName      string
+	WorkloadKind       string
+	WorkloadName       string
+	VirtualmachineName string
+	PodName            string
+	Applications       string
+	Services           string
+	StorageClassName   string
+	PVCFilter          string
+	Cluster            string
 }
 
 func ParseQueryParameter(req *restful.Request) *Query {
@@ -95,6 +96,7 @@ func ParseQueryParameter(req *restful.Request) *Query {
 	q.NodeName = req.QueryParameter("node")
 	q.WorkloadKind = req.QueryParameter("kind")
 	q.WorkloadName = req.QueryParameter("workload")
+	q.VirtualmachineName = req.QueryParameter("vm")
 	q.PodName = req.QueryParameter("pod")
 	q.Applications = req.QueryParameter("applications")
 	q.Services = req.QueryParameter("services")

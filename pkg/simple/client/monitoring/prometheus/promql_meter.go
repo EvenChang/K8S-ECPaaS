@@ -951,6 +951,14 @@ round(
 	1
 )`,
 
+	// virtualmachine
+	"meter_virtualmachine_cpu_usage": `avg(rate(kubevirt_vmi_vcpu_seconds{$1}[$step])) by (exported_namespace, node, name)`,
+	"meter_virtualmachine_memory_usage_wo_cache": `sum by (exported_namespace, node, name) (avg_over_time(kubevirt_vmi_memory_resident_bytes{$1}[$step]))`,
+	"meter_virtualmachine_net_bytes_transmitted": `sum by (exported_namespace, node, name) (irate(kubevirt_vmi_network_traffic_bytes_total{type="tx", $1}[$step])*8)`,
+	"meter_virtualmachine_net_bytes_received": `sum by (exported_namespace, node, name) (irate(kubevirt_vmi_network_traffic_bytes_total{type="rx", $1}[$step])*8)`,
+	"meter_virtualmachine_pvc_bytes_total": `sum by (exported_namespace, node, name) (irate(kubevirt_vmi_storage_read_traffic_bytes_total{$1}[$step])) +
+											 sum by (exported_namespace, node, name) (irate(kubevirt_vmi_storage_write_traffic_bytes_total{$1}[$step]))`,
+
 	// pod
 	"meter_pod_cpu_usage": `
 round(
@@ -1126,6 +1134,8 @@ func makeMeterExpr(meter string, o monitoring.QueryOptions) string {
 		return makeWorkloadMeterExpr(meter, tmpl, o)
 	case monitoring.LevelService:
 		return makeServiceMeterExpr(tmpl, o)
+	case monitoring.LevelVirtualmachine:
+		return makeVirtualmachineMeterExpr(tmpl, o)
 	case monitoring.LevelPod:
 		return makePodMeterExpr(tmpl, o)
 	default:
@@ -1186,6 +1196,10 @@ func makeWorkloadMeterExpr(meter string, tmpl string, o monitoring.QueryOptions)
 
 func makeServiceMeterExpr(tmpl string, o monitoring.QueryOptions) string {
 	return strings.Replace(tmpl, "$1", o.ResourceFilter, -1)
+}
+
+func makeVirtualmachineMeterExpr(tmpl string, o monitoring.QueryOptions) string {
+	return makeVirtualmachineMetricExpr(tmpl, o)
 }
 
 func makePodMeterExpr(tmpl string, o monitoring.QueryOptions) string {

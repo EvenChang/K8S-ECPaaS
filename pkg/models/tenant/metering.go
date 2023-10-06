@@ -375,6 +375,38 @@ func (t *tenantOperator) makeQueryOptions(user user.Info, q meteringv1alpha1.Que
 
 		qo.NamedMetrics = monitoringmodel.WorkloadMetrics
 
+	case monitoring.LevelVirtualmachine:
+		qo.Identifier = monitoringmodel.IdentifierVirtualmachine
+		qo.Option = monitoring.VirtualmachineOption{
+			ResourceFilter:     q.ResourceFilter,
+			NodeName:           q.NodeName,
+			NamespaceName:      q.NamespaceName,
+			VirtualmachineName: q.VirtualmachineName,
+		}
+
+		virtualmachineScope := request.NamespaceScope
+
+		listPods := authorizer.AttributesRecord{
+			User:            user,
+			Verb:            "list",
+			APIGroup:        "",
+			APIVersion:      "v1",
+			Resource:        "pods",
+			ResourceRequest: true,
+			Namespace:       q.NamespaceName,
+			ResourceScope:   virtualmachineScope,
+		}
+		decision, _, err = t.authorizer.Authorize(listPods)
+		if err != nil {
+			klog.Error(err)
+			return
+		}
+		if decision != authorizer.DecisionAllow {
+			return qo, errors.New(fmt.Sprintf(meteringv1alpha1.ErrScopeNotAllowed, virtualmachineScope))
+		}
+
+		qo.NamedMetrics = monitoringmodel.VirtualmachineMetrics
+
 	case monitoring.LevelPod:
 		qo.Identifier = monitoringmodel.IdentifierPod
 		qo.Option = monitoring.PodOption{

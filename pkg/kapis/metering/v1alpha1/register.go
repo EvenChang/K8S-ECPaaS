@@ -298,6 +298,78 @@ func AddToContainer(c *restful.Container, k8sClient kubernetes.Interface, meteri
 		Returns(http.StatusOK, respOK, model.Metrics{})).
 		Produces(restful.MIME_JSON)
 
+	ws.Route(ws.GET("/namespaces/{namespace}/virtualmachines").
+		To(h.HandleVirtualmachineMeterQuery).
+		Doc("Get VM-level meter data of the specific namespace's VMs.").
+		Param(ws.QueryParameter("operation", "Metering operation.").DataType("string").Required(false).DefaultValue(monitoringv1alpha3.OperationQuery)).
+		Param(ws.PathParameter("namespace", "The name of the namespace.").DataType("string").Required(true)).
+		Param(ws.QueryParameter("metrics_filter", "The metric name filter consists of a regexp pattern. It specifies which metric data to return. For example, the following filter matches both VM CPU usage and memory usage: `meter_virtualmachine_cpu_usage|meter_virtualmachine_memory_usage`.").DataType("string").Required(false)).
+		Param(ws.QueryParameter("resources_filter", "The VM filter consists of a regexp pattern. It specifies which VM data to return. For example, the following filter matches any VM whose name begins with redis: `redis.*`.").DataType("string").Required(false)).
+		Param(ws.QueryParameter("start", "Start time of query. Use **start** and **end** to retrieve metric data over a time span. It is a string with Unix time format, eg. 1559347200. ").DataType("string").Required(false)).
+		Param(ws.QueryParameter("end", "End time of query. Use **start** and **end** to retrieve metric data over a time span. It is a string with Unix time format, eg. 1561939200. ").DataType("string").Required(false)).
+		Param(ws.QueryParameter("step", "Time interval. Retrieve metric data at a fixed interval within the time range of start and end. It requires both **start** and **end** are provided. The format is [0-9]+[smhdwy]. Defaults to 10m (i.e. 10 min).").DataType("string").DefaultValue("10m").Required(false)).
+		Param(ws.QueryParameter("time", "A timestamp in Unix time format. Retrieve metric data at a single point in time. Defaults to now. Time and the combination of start, end, step are mutually exclusive.").DataType("string").Required(false)).
+		Param(ws.QueryParameter("sort_metric", "Sort VMs by the specified metric. Not applicable if **start** and **end** are provided.").DataType("string").Required(false)).
+		Param(ws.QueryParameter("sort_type", "Sort order. One of asc, desc.").DefaultValue("desc.").DataType("string").Required(false)).
+		Param(ws.QueryParameter("page", "The page number. This field paginates result data of each metric, then returns a specific page. For example, setting **page** to 2 returns the second page. It only applies to sorted metric data.").DataType("integer").Required(false)).
+		Param(ws.QueryParameter("limit", "Page size, the maximum number of results in a single page. Defaults to 5.").DataType("integer").Required(false).DefaultValue("5")).
+		Metadata(restfulspec.KeyOpenAPITags, []string{constants.VirtualmachineMetersTag}).
+		Writes(model.Metrics{}).
+		Returns(http.StatusOK, respOK, model.Metrics{})).
+		Produces(restful.MIME_JSON)
+
+	ws.Route(ws.GET("/namespaces/{namespace}/virtualmachines/{vm}").
+		To(h.HandleVirtualmachineMeterQuery).
+		Doc("Get VM-level meter data of a specific VM. Navigate to the VM by the VM's namespace.").
+		Param(ws.QueryParameter("operation", "Metering operation.").DataType("string").Required(false).DefaultValue(monitoringv1alpha3.OperationQuery)).
+		Param(ws.PathParameter("namespace", "The name of the namespace.").DataType("string").Required(true)).
+		Param(ws.PathParameter("vm", "VM name.").DataType("string").Required(true)).
+		Param(ws.QueryParameter("metrics_filter", "The metric name filter consists of a regexp pattern. It specifies which metric data to return. For example, the following filter matches both VM CPU usage and memory usage: `meter_virtualmachine_cpu_usage|meter_virtualmachine_memory_usage`.").DataType("string").Required(false)).
+		Param(ws.QueryParameter("start", "Start time of query. Use **start** and **end** to retrieve metric data over a time span. It is a string with Unix time format, eg. 1559347200. ").DataType("string").Required(false)).
+		Param(ws.QueryParameter("end", "End time of query. Use **start** and **end** to retrieve metric data over a time span. It is a string with Unix time format, eg. 1561939200. ").DataType("string").Required(false)).
+		Param(ws.QueryParameter("step", "Time interval. Retrieve metric data at a fixed interval within the time range of start and end. It requires both **start** and **end** are provided. The format is [0-9]+[smhdwy]. Defaults to 10m (i.e. 10 min).").DataType("string").DefaultValue("10m").Required(false)).
+		Param(ws.QueryParameter("time", "A timestamp in Unix time format. Retrieve metric data at a single point in time. Defaults to now. Time and the combination of start, end, step are mutually exclusive.").DataType("string").Required(false)).
+		Metadata(restfulspec.KeyOpenAPITags, []string{constants.VirtualmachineMetersTag}).
+		Writes(model.Metrics{}).
+		Returns(http.StatusOK, respOK, model.Metrics{})).
+		Produces(restful.MIME_JSON)
+
+	ws.Route(ws.GET("/nodes/{node}/virtualmachines").
+		To(h.HandleVirtualmachineMeterQuery).
+		Doc("Get VM-level meter data of all VMs on a specific node.").
+		Param(ws.QueryParameter("operation", "Metering operation.").DataType("string").Required(false).DefaultValue(monitoringv1alpha3.OperationQuery)).
+		Param(ws.PathParameter("node", "Node name.").DataType("string").Required(true)).
+		Param(ws.QueryParameter("metrics_filter", "The metric name filter consists of a regexp pattern. It specifies which metric data to return. For example, the following filter matches both VM CPU usage and memory usage: `meter_virtualmachine_cpu_usage|meter_virtualmachine_memory_usage`.").DataType("string").Required(false)).
+		Param(ws.QueryParameter("resources_filter", "The VM filter consists of a regexp pattern. It specifies which VM data to return. For example, the following filter matches any VM whose name begins with redis: `redis.*`.").DataType("string").Required(false)).
+		Param(ws.QueryParameter("start", "Start time of query. Use **start** and **end** to retrieve metric data over a time span. It is a string with Unix time format, eg. 1559347200. ").DataType("string").Required(false)).
+		Param(ws.QueryParameter("end", "End time of query. Use **start** and **end** to retrieve metric data over a time span. It is a string with Unix time format, eg. 1561939200. ").DataType("string").Required(false)).
+		Param(ws.QueryParameter("step", "Time interval. Retrieve metric data at a fixed interval within the time range of start and end. It requires both **start** and **end** are provided. The format is [0-9]+[smhdwy]. Defaults to 10m (i.e. 10 min).").DataType("string").DefaultValue("10m").Required(false)).
+		Param(ws.QueryParameter("time", "A timestamp in Unix time format. Retrieve metric data at a single point in time. Defaults to now. Time and the combination of start, end, step are mutually exclusive.").DataType("string").Required(false)).
+		Param(ws.QueryParameter("sort_metric", "Sort VMs by the specified metric. Not applicable if **start** and **end** are provided.").DataType("string").Required(false)).
+		Param(ws.QueryParameter("sort_type", "Sort order. One of asc, desc.").DefaultValue("desc.").DataType("string").Required(false)).
+		Param(ws.QueryParameter("page", "The page number. This field paginates result data of each metric, then returns a specific page. For example, setting **page** to 2 returns the second page. It only applies to sorted metric data.").DataType("integer").Required(false)).
+		Param(ws.QueryParameter("limit", "Page size, the maximum number of results in a single page. Defaults to 5.").DataType("integer").Required(false).DefaultValue("5")).
+		Metadata(restfulspec.KeyOpenAPITags, []string{constants.VirtualmachineMetersTag}).
+		Writes(model.Metrics{}).
+		Returns(http.StatusOK, respOK, model.Metrics{})).
+		Produces(restful.MIME_JSON)
+
+	ws.Route(ws.GET("/nodes/{node}/virtualmachines/{vm}").
+		To(h.HandleVirtualmachineMeterQuery).
+		Doc("Get VM-level meter data of a specific VM. Navigate to the VM by the node where it is scheduled.").
+		Param(ws.QueryParameter("operation", "Metering operation.").DataType("string").Required(false).DefaultValue(monitoringv1alpha3.OperationQuery)).
+		Param(ws.PathParameter("node", "Node name.").DataType("string").Required(true)).
+		Param(ws.PathParameter("vm", "VM name.").DataType("string").Required(true)).
+		Param(ws.QueryParameter("metrics_filter", "The metric name filter consists of a regexp pattern. It specifies which metric data to return. For example, the following filter matches both VM CPU usage and memory usage: `meter_virtualmachine_cpu_usage|meter_virtualmachine_memory_usage`.").DataType("string").Required(false)).
+		Param(ws.QueryParameter("start", "Start time of query. Use **start** and **end** to retrieve metric data over a time span. It is a string with Unix time format, eg. 1559347200. ").DataType("string").Required(false)).
+		Param(ws.QueryParameter("end", "End time of query. Use **start** and **end** to retrieve metric data over a time span. It is a string with Unix time format, eg. 1561939200. ").DataType("string").Required(false)).
+		Param(ws.QueryParameter("step", "Time interval. Retrieve metric data at a fixed interval within the time range of start and end. It requires both **start** and **end** are provided. The format is [0-9]+[smhdwy]. Defaults to 10m (i.e. 10 min).").DataType("string").DefaultValue("10m").Required(false)).
+		Param(ws.QueryParameter("time", "A timestamp in Unix time format. Retrieve metric data at a single point in time. Defaults to now. Time and the combination of start, end, step are mutually exclusive.").DataType("string").Required(false)).
+		Metadata(restfulspec.KeyOpenAPITags, []string{constants.VirtualmachineMetersTag}).
+		Writes(model.Metrics{}).
+		Returns(http.StatusOK, respOK, model.Metrics{})).
+		Produces(restful.MIME_JSON)
+
 	ws.Route(ws.GET("/namespaces/{namespace}/pods").
 		To(h.HandlePodMeterQuery).
 		Doc("Get pod-level meter data of the specific namespace's pods.").

@@ -266,6 +266,13 @@ var VirtualmachineMetrics = []string{
 	"virtualmachine_disk_write_times_ms",
 	"virtualmachine_network_bytes_transmitted",
 	"virtualmachine_network_bytes_received",
+
+	// meter
+	"meter_virtualmachine_cpu_usage",
+	"meter_virtualmachine_memory_usage_wo_cache",
+	"meter_virtualmachine_net_bytes_transmitted",
+	"meter_virtualmachine_net_bytes_received",
+	"meter_virtualmachine_pvc_bytes_total",
 }
 
 var PodMetrics = []string{
