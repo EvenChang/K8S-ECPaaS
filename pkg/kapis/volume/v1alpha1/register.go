@@ -33,27 +33,65 @@ func AddToContainer(container *restful.Container, minioClient *minio.Client, k8s
 	webservice := runtime.NewWebService(GroupVersion)
 	handler := newHandler(minioClient, k8sclient, ksclient)
 
-	webservice.Route(webservice.GET("/upload/file/images").
+	webservice.Route(webservice.GET("/minio/images").
 		To(handler.ListMinioObjects).
-		Doc("List all uploaded images").
+		Doc("List all Minio images").
 		Returns(http.StatusOK, api.StatusOK, ImagesList{}).
 		Metadata(restfulspec.KeyOpenAPITags, []string{constants.MinioImageTag}))
 
-	webservice.Route(webservice.GET("/upload/file/checkFileExist/{imageName}").
+	webservice.Route(webservice.GET("/namespaces/{namespace}/minio/images").
+		To(handler.ListMinioObjectsWithNs).
+		Doc("List all Minio images with namespace").
+		Param(webservice.PathParameter("namespace", "name of a namespace").Required(true)).
+		Returns(http.StatusOK, api.StatusOK, ImagesList{}).
+		Metadata(restfulspec.KeyOpenAPITags, []string{constants.MinioImageTag}))
+
+	webservice.Route(webservice.GET("/minio/image/checkFileExist/{imageName}").
 		To(handler.GetMinioObjectStatus).
-		Doc("Check If image exist or not").
+		Doc("Check if Minio image exist").
+		Param(webservice.PathParameter("imageName", "Image name").Required(true)).
 		Returns(http.StatusOK, api.StatusOK, ObjectStatus{}).
 		Metadata(restfulspec.KeyOpenAPITags, []string{constants.MinioImageTag}))
 
-	webservice.Route(webservice.POST("/upload/file/").
+	webservice.Route(webservice.GET("/namespaces/{namespace}/minio/image/checkFileExist/{imageName}").
+		To(handler.GetMinioObjectStatusWithNs).
+		Doc("Check If Minio image exist with namespace").
+		Param(webservice.PathParameter("imageName", "Image name").Required(true)).
+		Param(webservice.PathParameter("namespace", "name of a namespace").Required(true)).
+		Returns(http.StatusOK, api.StatusOK, ObjectStatus{}).
+		Metadata(restfulspec.KeyOpenAPITags, []string{constants.MinioImageTag}))
+
+	formData := webservice.FormParameter("uploadfile", "File Stream form-data").Required(true)
+	formData.DataType("file")
+	webservice.Route(webservice.POST("/minio/image").
 		To(handler.UploadMinioObject).
-		Doc("Upload Volume Image").
+		Doc("Upload Minio Image").
+		Consumes("multipart/form-data").
+		Param(formData).
 		Returns(http.StatusOK, api.StatusOK, errors.None).
 		Metadata(restfulspec.KeyOpenAPITags, []string{constants.MinioImageTag}))
 
-	webservice.Route(webservice.DELETE("/upload/file/{imageName}").
+	webservice.Route(webservice.POST("/namespaces/{namespace}/minio/image").
+		To(handler.UploadMinioObjectWithNs).
+		Doc("Upload Minio Image with namespace").
+		Consumes("multipart/form-data").
+		Param(formData).
+		Param(webservice.PathParameter("namespace", "name of a namespace").Required(true)).
+		Returns(http.StatusOK, api.StatusOK, errors.None).
+		Metadata(restfulspec.KeyOpenAPITags, []string{constants.MinioImageTag}))
+
+	webservice.Route(webservice.DELETE("/minio/image/{imageName}").
 		To(handler.DeleteMinioObject).
-		Doc("Delete Volume Image").
+		Doc("Delete Minio Image").
+		Param(webservice.PathParameter("imageName", "Image name").Required(true)).
+		Returns(http.StatusOK, api.StatusOK, errors.None).
+		Metadata(restfulspec.KeyOpenAPITags, []string{constants.MinioImageTag}))
+
+	webservice.Route(webservice.DELETE("/namespaces/{namespace}/minio/image/{imageName}").
+		To(handler.DeleteMinioObjectWithNs).
+		Doc("Delete Minio Image with namespace").
+		Param(webservice.PathParameter("namespace", "name of a namespace").Required(true)).
+		Param(webservice.PathParameter("imageName", "Image name").Required(true)).
 		Returns(http.StatusOK, api.StatusOK, errors.None).
 		Metadata(restfulspec.KeyOpenAPITags, []string{constants.MinioImageTag}))
 

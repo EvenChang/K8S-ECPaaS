@@ -10,7 +10,23 @@ import (
 	kvapi "kubevirt.io/api/core/v1"
 )
 
-const VirtualMachineFinalizer = "finalizers.virtualization.ecpaas.io/virtualmachine"
+const (
+	VirtualMachineFinalizer = "finalizers.virtualization.ecpaas.io/virtualmachine"
+
+	VirtualizationBootOrder      = "virtualization.ecpaas.io/bootorder"
+	VirtualizationDiskType       = "virtualization.ecpaas.io/disk-type"
+	VirtualizationImageInfo      = "virtualization.ecpaas.io/image-info"
+	VirtualizationAliasName      = "virtualization.ecpaas.io/alias-name"
+	VirtualizationCpuCores       = "virtualization.ecpaas.io/cpu-cores"
+	VirtualizationImageMemory    = "virtualization.ecpaas.io/image-memory"
+	VirtualizationImageStorage   = "virtualization.ecpaas.io/image-storage"
+	VirtualizationUploadFileName = "virtualization.ecpaas.io/upload-file-name"
+	VirtualizationOSFamily       = "virtualization.ecpaas.io/os-family"
+	VirtualizationOSVersion      = "virtualization.ecpaas.io/os-version"
+	VirtualizationOSPlatform     = "virtualization.ecpaas.io/os-platform"
+	VirtualizationDescription    = "virtualization.ecpaas.io/description"
+	VirtualizationSystemDiskSize = "virtualization.ecpaas.io/system-disk-size"
+)
 
 type ResourceRequirements struct {
 	// Requests is a description of the initial vmi resources.
@@ -23,8 +39,8 @@ type ResourceRequirements struct {
 	Limits v1.ResourceList `json:"limits,omitempty"`
 }
 
-type Cpu struct {
-	Cores int32 `json:"cores,omitempty"`
+type CPU struct {
+	Cores uint32 `json:"cores,omitempty"`
 }
 
 type MacVtap struct {
@@ -59,7 +75,7 @@ type Devices struct {
 }
 
 type Domain struct {
-	Cpu       Cpu                  `json:"cpu,omitempty"`
+	CPU       CPU                  `json:"cpu,omitempty"`
 	Devices   Devices              `json:"devices,omitempty"`
 	Resources ResourceRequirements `json:"resources,omitempty"`
 }

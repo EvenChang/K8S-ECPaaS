@@ -145,8 +145,11 @@ const (
 
 	DashboardTag = "Dashboard"
 	// accton extension
-	VpcNetworkTag = "VPC Network"
-	VpcSubnetTag  = "VPC Subnet"
+	VpcNetworkTag     = "VPC Network"
+	VpcSubnetTag      = "VPC Subnet"
+	VirtualMachineTag = "Virtualization Virtual Machine"
+	DiskTag           = "Virtualization Disk"
+	ImageTag          = "Virtualization Image"
 
 	MinioImageTag = "Minio Images"
 )
