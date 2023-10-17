@@ -40,6 +40,7 @@ type meterHandler interface {
 	HandleOpenpitrixMeterQuery(req *restful.Request, resp *restful.Response)
 	HandleWorkloadMeterQuery(req *restful.Request, resp *restful.Response)
 	HandleApplicationMeterQuery(req *restful.Request, resp *restful.Response)
+	HandleVirtualmachineMeterQuery(req *restful.Request, resp *restful.Response)
 	HandlePodMeterQuery(req *restful.Request, resp *restful.Response)
 	HandleServiceMeterQuery(req *restful.Request, resp *restful.Response)
 	HandlePVCMeterQuery(req *restful.Request, resp *restful.Response)

@@ -326,6 +326,23 @@ func (h handler) HandleOpenpitrixMeterQuery(req *restful.Request, resp *restful.
 	h.handleNamedMetersQuery(resp, opt)
 }
 
+func (h handler) HandleVirtualmachineMeterQuery(req *restful.Request, resp *restful.Response) {
+	params := parseMeteringRequestParams(req)
+	opt, err := h.makeQueryOptions(params, monitoring.LevelVirtualmachine)
+	if err != nil {
+		if err.Error() == ErrNoHit {
+			res := handleNoHit(opt.namedMetrics)
+			resp.WriteAsJson(res)
+			return
+		}
+
+		api.HandleBadRequest(resp, nil, err)
+		return
+	}
+
+	h.handleNamedMetersQuery(resp, opt)
+}
+
 func (h handler) HandlePodMeterQuery(req *restful.Request, resp *restful.Response) {
 	params := parseMeteringRequestParams(req)
 	opt, err := h.makeQueryOptions(params, monitoring.LevelPod)

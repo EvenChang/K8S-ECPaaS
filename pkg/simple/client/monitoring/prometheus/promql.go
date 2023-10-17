@@ -213,6 +213,18 @@ var promQLTemplates = map[string]string{
 	"workload_daemonset_unavailable_replicas_ratio":   `namespace:daemonset_unavailable_replicas:ratio{$1}`,
 	"workload_statefulset_unavailable_replicas_ratio": `namespace:statefulset_unavailable_replicas:ratio{$1}`,
 
+	// virtualmachine
+	"virtualmachine_cpu_usage":                 `avg(rate(kubevirt_vmi_vcpu_seconds{$1}[5m])) by (exported_namespace, node, name)`,
+	"virtualmachine_memory_usage":              `sum by (exported_namespace, node, name) (kubevirt_vmi_memory_resident_bytes{$1})`,
+	"virtualmachine_disk_read_iops":            `sum by (exported_namespace, node, name) (irate(kubevirt_vmi_storage_iops_read_total{$1}[5m]))`,
+	"virtualmachine_disk_write_iops":           `sum by (exported_namespace, node, name) (irate(kubevirt_vmi_storage_iops_write_total{$1}[5m]))`,
+	"virtualmachine_disk_read_traffic_bytes":   `sum by (exported_namespace, node, name) (irate(kubevirt_vmi_storage_read_traffic_bytes_total{$1}[5m]))`,
+	"virtualmachine_disk_write_traffic_bytes":  `sum by (exported_namespace, node, name) (irate(kubevirt_vmi_storage_write_traffic_bytes_total{$1}[5m]))`,
+	"virtualmachine_disk_read_times_ms":        `sum by (exported_namespace, node, name) (irate(kubevirt_vmi_storage_read_times_ms_total{$1}[5m]))`,
+	"virtualmachine_disk_write_times_ms":       `sum by (exported_namespace, node, name) (irate(kubevirt_vmi_storage_write_times_ms_total{$1}[5m]))`,
+	"virtualmachine_network_bytes_transmitted": `sum by (exported_namespace, node, name) (irate(kubevirt_vmi_network_traffic_bytes_total{type="tx", $1}[5m])*8)`,
+	"virtualmachine_network_bytes_received":    `sum by (exported_namespace, node, name) (irate(kubevirt_vmi_network_traffic_bytes_total{type="rx", $1}[5m])*8)`,
+
 	// pod
 	"pod_cpu_usage":               `round(sum by (namespace, pod) (irate(container_cpu_usage_seconds_total{job="kubelet", pod!="", image!=""}[5m])) * on (namespace, pod) group_left(owner_kind, owner_name) kube_pod_owner{$1} * on (namespace, pod) group_left(node) kube_pod_info{$2}, 0.001)`,
 	"pod_memory_usage":            `sum by (namespace, pod) (container_memory_usage_bytes{job="kubelet", pod!="", image!=""}) * on (namespace, pod) group_left(owner_kind, owner_name) kube_pod_owner{$1} * on (namespace, pod) group_left(node) kube_pod_info{$2}`,
@@ -288,6 +300,8 @@ func makeExpr(metric string, opts monitoring.QueryOptions) string {
 		return makeNamespaceMetricExpr(tmpl, opts)
 	case monitoring.LevelWorkload:
 		return makeWorkloadMetricExpr(metric, tmpl, opts)
+	case monitoring.LevelVirtualmachine:
+		return makeVirtualmachineMetricExpr(tmpl, opts)
 	case monitoring.LevelPod:
 		return makePodMetricExpr(tmpl, opts)
 	case monitoring.LevelContainer:
@@ -370,6 +384,74 @@ func makeWorkloadMetricExpr(metric, tmpl string, o monitoring.QueryOptions) stri
 	}
 
 	return strings.NewReplacer("$1", workloadSelector, "$2", kindSelector).Replace(tmpl)
+}
+
+func makeVirtualmachineMetricExpr(tmpl string, o monitoring.QueryOptions) string {
+	var virtualmachineSelector string
+
+	// For monitoring virtualmachines in the specific namespace
+	// GET /namespaces/{namespace}/virtualmachines/{vm} or
+	// GET /namespaces/{namespace}/virtualmachines
+	if o.NamespaceName != "" {
+		if o.VirtualmachineName != "" {
+			virtualmachineSelector = fmt.Sprintf(`name="%s", exported_namespace="%s"`, o.VirtualmachineName, o.NamespaceName)
+		} else {
+			virtualmachineSelector = fmt.Sprintf(`name=~"%s", exported_namespace="%s"`, o.ResourceFilter, o.NamespaceName)
+		}
+	} else {
+		var namespaces, virtualmachines []string
+		if o.NamespacedResourcesFilter != "" {
+			for _, nv := range strings.Split(o.NamespacedResourcesFilter, "|") {
+				if nvarr := strings.SplitN(nv, "/", 2); len(nvarr) > 1 {
+					namespaces = append(namespaces, nvarr[0])
+					virtualmachines = append(virtualmachines, nvarr[1])
+				} else {
+					virtualmachines = append(virtualmachines, nv)
+				}
+			}
+		}
+		// For monitoring virtualmachines on the specific node
+		// GET /nodes/{node}/virtualmachines/{vm}
+		// GET /nodes/{node}/virtualmachines
+		if o.NodeName != "" {
+			if o.VirtualmachineName != "" {
+				if nvarr := strings.SplitN(o.VirtualmachineName, "/", 2); len(nvarr) > 1 {
+					virtualmachineSelector = fmt.Sprintf(`exported_namespace="%s",name="%s", node="%s"`, nvarr[0], nvarr[1], o.NodeName)
+				} else {
+					virtualmachineSelector = fmt.Sprintf(`name="%s", node="%s"`, o.VirtualmachineName, o.NodeName)
+				}
+			} else {
+				var vs []string
+				vs = append(vs, fmt.Sprintf(`node="%s"`, o.NodeName))
+				if o.ResourceFilter != "" {
+					vs = append(vs, fmt.Sprintf(`name=~"%s"`, o.ResourceFilter))
+				}
+
+				if len(namespaces) > 0 {
+					vs = append(vs, fmt.Sprintf(`exported_namespace=~"%s"`, strings.Join(namespaces, "|")))
+				}
+				if len(virtualmachines) > 0 {
+					vs = append(vs, fmt.Sprintf(`name=~"%s"`, strings.Join(virtualmachines, "|")))
+				}
+				virtualmachineSelector = strings.Join(vs, ",")
+			}
+		} else {
+			// For monitoring virtualmachines in the whole cluster
+			// Get /virtualmachines
+			var vs []string
+			if len(namespaces) > 0 {
+				vs = append(vs, fmt.Sprintf(`exported_namespace=~"%s"`, strings.Join(namespaces, "|")))
+			}
+			if len(virtualmachines) > 0 {
+				vs = append(vs, fmt.Sprintf(`name=~"%s"`, strings.Join(virtualmachines, "|")))
+			}
+			if len(vs) > 0 {
+				virtualmachineSelector = strings.Join(vs, ",")
+			}
+		}
+	}
+
+	return strings.NewReplacer("$1", virtualmachineSelector).Replace(tmpl)
 }
 
 func makePodMetricExpr(tmpl string, o monitoring.QueryOptions) string {
