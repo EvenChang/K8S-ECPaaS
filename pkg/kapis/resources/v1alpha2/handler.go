@@ -61,7 +61,7 @@ func newResourceHandler(k8sClient kubernetes.Interface, factory informers.Inform
 	return &resourceHandler{
 		resourcesGetter:     resource.NewResourceGetter(factory),
 		componentsGetter:    components.NewComponentsGetter(factory.KubernetesSharedInformerFactory()),
-		resourceQuotaGetter: quotas.NewResourceQuotaGetter(factory.KubernetesSharedInformerFactory()),
+		resourceQuotaGetter: quotas.NewResourceQuotaGetter(factory.KubernetesSharedInformerFactory(), factory.KubeSphereSharedInformerFactory()),
 		revisionGetter:      revisions.NewRevisionGetter(factory.KubernetesSharedInformerFactory()),
 		routerOperator:      routers.NewRouterOperator(k8sClient, factory.KubernetesSharedInformerFactory()),
 		gitVerifier:         git.NewGitVerifier(factory.KubernetesSharedInformerFactory()),
@@ -149,6 +149,18 @@ func (r *resourceHandler) handleGetClusterQuotas(_ *restful.Request, response *r
 func (r *resourceHandler) handleGetNamespaceQuotas(request *restful.Request, response *restful.Response) {
 	namespace := request.PathParameter("namespace")
 	quota, err := r.resourceQuotaGetter.GetNamespaceQuota(namespace)
+
+	if err != nil {
+		api.HandleInternalError(response, nil, err)
+		return
+	}
+
+	response.WriteAsJson(quota)
+}
+
+func (r *resourceHandler) handleVirtualizationGetNamespaceQuotas(request *restful.Request, response *restful.Response) {
+	namespace := request.PathParameter("namespace")
+	quota, err := r.resourceQuotaGetter.GetVirtualizationNamespaceQuota(namespace)
 
 	if err != nil {
 		api.HandleInternalError(response, nil, err)

@@ -130,6 +130,13 @@ func AddToContainer(c *restful.Container, k8sClient kubernetes.Interface, factor
 		Metadata(restfulspec.KeyOpenAPITags, []string{constants.NamespaceResourcesTag}).
 		To(handler.handleGetNamespaceQuotas))
 
+	webservice.Route(webservice.GET("virtualization/namespaces/{namespace}/quotas").
+		Doc("get specified namespace's of virtualization resource quota and usage").
+		Param(webservice.PathParameter("namespace", "the name of the project")).
+		Returns(http.StatusOK, api.StatusOK, api.ResourceQuota{}).
+		Metadata(restfulspec.KeyOpenAPITags, []string{constants.NamespaceResourcesTag}).
+		To(handler.handleVirtualizationGetNamespaceQuotas))
+
 	webservice.Route(webservice.POST("registry/verify").
 		Deprecate().
 		To(handler.handleVerifyRegistryCredential).
