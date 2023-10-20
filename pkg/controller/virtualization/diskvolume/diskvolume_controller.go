@@ -15,6 +15,7 @@ import (
 	"k8s.io/klog"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -65,7 +66,7 @@ func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	klog.V(2).Infof("Reconciling VirtualMachine %s/%s", req.Namespace, req.Name)
+	klog.V(2).Infof("Reconciling DiskVolume %s/%s", req.Namespace, req.Name)
 
 	rootCtx := context.Background()
 	dv := &virtzv1alpha1.DiskVolume{}
@@ -111,22 +112,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if dv_instance.Spec.Source.Blank != nil {
 			err := r.createPVC(dv_instance, scName)
 			if err != nil {
-				return ctrl.Result{}, err
+				statusErr := err.(*errors.StatusError)
+				if statusErr.ErrStatus.Reason == metav1.StatusReasonAlreadyExists {
+					klog.Infof("PVC %s/%s already exists", dv_instance.Namespace, dv_instance.Spec.PVCName)
+				} else {
+					klog.Infof("Cannot create PVC: %v\n", err)
+					return ctrl.Result{}, err
+				}
 			}
 		}
 		// clone pvc for image disk
 		if dv_instance.Spec.Source.Image != nil {
 			err := r.clonePVC(virtClient, dv_instance, scName)
 			if err != nil {
+				klog.Infof("Cannot clone PVC: %v\n", err)
 				return ctrl.Result{}, err
 			}
 		}
 
 		status.Created = true
-
-		if dv_instance.OwnerReferences != nil {
-			status.Owner = dv_instance.OwnerReferences[0].Name
-		}
 
 	}
 
@@ -134,6 +138,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if err := r.Update(rootCtx, dv_instance); err != nil {
 			return ctrl.Result{}, err
 		}
+	}
+
+	if dv_instance.OwnerReferences != nil {
+		status.Owner = dv_instance.OwnerReferences[0].Name
+	} else if dv_instance.Labels[virtzv1alpha1.VirtualizationDiskVolumeOwner] != "" {
+		status.Owner = dv_instance.Labels[virtzv1alpha1.VirtualizationDiskVolumeOwner]
+	} else {
+		status.Owner = ""
 	}
 
 	// update status
