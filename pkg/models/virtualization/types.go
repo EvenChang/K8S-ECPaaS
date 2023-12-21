@@ -7,6 +7,7 @@ package virtualization
 const (
 	vmNamePrefix         = "vm-"   // vm: virtual machine
 	diskVolumeNamePrefix = "disk-" // disk: disk volume
+	diskVolumeNameSuffix = "-ro-mode"
 	diskVolumeNewPrefix  = "new-"
 	imageNamePrefix      = "image-"
 )
@@ -96,13 +97,15 @@ type ModifyDiskRequest struct {
 }
 
 type DiskResponse struct {
-	ID          string     `json:"id" description:"Disk id"`
-	Name        string     `json:"name" description:"Disk name"`
-	Namespace   string     `json:"namespace" description:"Disk namespace"`
-	Description string     `json:"description" default:"" description:"Disk description"`
-	Type        string     `json:"type" description:"Disk type, the value is 'system' or 'data'"`
-	Size        uint       `json:"size" default:"20" description:"Disk size, unit is GB" minimum:"10" maximum:"500"`
-	Status      DiskStatus `json:"status" description:"Disk status"`
+	ID             string     `json:"id" description:"Disk id"`
+	Name           string     `json:"name" description:"Disk name"`
+	Namespace      string     `json:"namespace" description:"Disk namespace"`
+	Description    string     `json:"description" default:"" description:"Disk description"`
+	Type           string     `json:"type" description:"Disk type, the value is 'system' or 'data'"`
+	Size           uint       `json:"size" default:"20" description:"Disk size, unit is GB" minimum:"10" maximum:"500"`
+	Mode           string     `json:"mode" default:"rw" description:"Disk mode, the value is 'rw' or 'ro'"`
+	MinioImageName string     `json:"minio_image_name" description:"File name which created by minio image api"`
+	Status         DiskStatus `json:"status" description:"Disk status"`
 }
 
 type DiskStatus struct {
@@ -135,7 +138,7 @@ type ImageInfoResponse struct {
 
 type ImageRequest struct {
 	Name           string `json:"name" description:"Image name. Valid characters: A-Z, a-z, 0-9, and -(hyphen)." maximum:"16"`
-	OSFamily       string `json:"os_family" default:"ubuntu" description:"Image operating system"`
+	OSFamily       string `json:"os_family" default:"ubuntu" description:"Image operating system, valid values are 'ubuntu', 'centos', 'debian', 'fedora', 'windows'"`
 	Version        string `json:"version" default:"20.04_LTS_64bit" description:"Image version"`
 	CpuCores       uint   `json:"cpu_cores" default:"1" description:"Default image cpu cores" minimum:"1" maximum:"4"`
 	Memory         uint   `json:"memory" default:"1" description:"Default image memory, unit is GB." minimum:"1" maximum:"8"`
@@ -143,6 +146,7 @@ type ImageRequest struct {
 	Description    string `json:"description" description:"Image description. Default is empty string." maximum:"128"`
 	MinioImageName string `json:"minio_image_name" description:"File name which created by minio image api"`
 	Shared         bool   `json:"shared" default:"false" description:"Image shared or not"`
+	Type           string `json:"type" default:"cloud" description:"Image type, the value is 'cloud' or 'iso'"`
 }
 
 type CloneImageRequest struct {
@@ -172,6 +176,7 @@ type ImageResponse struct {
 	MinioImageName string      `json:"minio_image_name" description:"File name which created by minio image api"`
 	Description    string      `json:"description" default:"" description:"Image description"`
 	Shared         bool        `json:"shared" default:"false" description:"Image shared or not"`
+	Type           string      `json:"type" default:"cloud" description:"Image type, the value is 'cloud' or 'iso'"`
 	Status         ImageStatus `json:"status" description:"Image status"`
 }
 

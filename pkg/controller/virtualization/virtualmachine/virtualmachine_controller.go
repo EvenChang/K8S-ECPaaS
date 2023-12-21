@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -308,6 +309,15 @@ func (r *Reconciler) updateDiskVolumes(vm_instance *virtzv1alpha1.VirtualMachine
 				continue
 			}
 
+			// skip hotpluggable is false
+			dv := &virtzv1alpha1.DiskVolume{}
+			if err := r.Get(context.Background(), types.NamespacedName{Name: diskVolume, Namespace: req.Namespace}, dv); err != nil {
+				return err
+			}
+			if dv.Labels[virtzv1alpha1.VirtualizationDiskHotpluggable] == "false" {
+				continue
+			}
+
 			if vm_instance.Annotations[virtzv1alpha1.VirtualizationLastDiskVolumes] != "" {
 				lastDiskVolumes := strings.Split(vm_instance.Annotations[virtzv1alpha1.VirtualizationLastDiskVolumes], ",")
 				if ContainsString(lastDiskVolumes, diskVolume, nil) {
@@ -414,7 +424,8 @@ func GenerateDiskVolume(vm_instance *virtzv1alpha1.VirtualMachine, diskVolumeTem
 	}
 	diskVolume.Annotations["cdi.kubevirt.io/storage.deleteAfterCompletion"] = "false"
 
-	if diskVolumeTemplate.Labels[virtzv1alpha1.VirtualizationDiskType] == "system" {
+	if diskVolumeTemplate.Labels[virtzv1alpha1.VirtualizationDiskType] == "system" ||
+		diskVolumeTemplate.Labels[virtzv1alpha1.VirtualizationDiskMediaType] == "cdrom" {
 		diskVolume.OwnerReferences = []metav1.OwnerReference{
 			{
 				APIVersion:         vm_instance.APIVersion,
@@ -507,20 +518,14 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 	kvvmSpec.Template.Spec.Hostname = virtzSpec.Hardware.Hostname
 
 	if virtzSpec.Hardware.Volumes != nil {
-		kvvmSpec.Template.Spec.Domain.Devices.Disks = make([]kvapi.Disk, len(virtzSpec.Hardware.Volumes))
-		for i, volume := range virtzSpec.Hardware.Volumes {
-			kvvmSpec.Template.Spec.Domain.Devices.Disks[i] = kvapi.Disk{
-				Name: volume.Name,
-				DiskDevice: kvapi.DiskDevice{
-					Disk: &kvapi.DiskTarget{
-						Bus: "virtio",
-					},
-				},
-			}
-		}
-
 		kvvmSpec.Template.Spec.Volumes = make([]kvapi.Volume, len(virtzSpec.Hardware.Volumes))
 		for i, volume := range virtzSpec.Hardware.Volumes {
+			newDisk := kvapi.Disk{}
+			newDisk.Name = volume.Name
+			newDisk.DiskDevice = kvapi.DiskDevice{}
+			newDisk.DiskDevice.Disk = &kvapi.DiskTarget{}
+			newDisk.DiskDevice.Disk.Bus = "virtio"
+
 			if volume.PersistentVolumeClaim != nil {
 				kvvmSpec.Template.Spec.Volumes[i] = kvapi.Volume{
 					Name: volume.Name,
@@ -532,6 +537,8 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 						},
 					},
 				}
+
+				kvvmSpec.Template.Spec.Domain.Devices.Disks = append(kvvmSpec.Template.Spec.Domain.Devices.Disks, newDisk)
 			}
 			if volume.CloudInitNoCloud != nil {
 				kvvmSpec.Template.Spec.Volumes[i] = kvapi.Volume{
@@ -542,6 +549,8 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 						},
 					},
 				}
+
+				kvvmSpec.Template.Spec.Domain.Devices.Disks = append(kvvmSpec.Template.Spec.Domain.Devices.Disks, newDisk)
 			}
 			if volume.ContainerDisk != nil {
 				kvvmSpec.Template.Spec.Volumes[i] = kvapi.Volume{
@@ -552,6 +561,62 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 						},
 					},
 				}
+
+				kvvmSpec.Template.Spec.Domain.Devices.Disks = append(kvvmSpec.Template.Spec.Domain.Devices.Disks, newDisk)
+			}
+		}
+	}
+
+	if virtzSpec.Hardware.Domain.Machine != nil {
+		kvvmSpec.Template.Spec.Domain.Machine = &kvapi.Machine{}
+		kvvmSpec.Template.Spec.Domain.Machine = virtzSpec.Hardware.Domain.Machine
+	}
+
+	if virtzSpec.Hardware.Domain.Features != nil {
+		kvvmSpec.Template.Spec.Domain.Features = &kvapi.Features{}
+		kvvmSpec.Template.Spec.Domain.Features = virtzSpec.Hardware.Domain.Features
+	}
+
+	if virtzSpec.Hardware.Domain.Devices.Disks != nil {
+		for _, disk := range virtzSpec.Hardware.Domain.Devices.Disks {
+			newDisk := kvapi.Disk{}
+			newDisk.Name = disk.Name
+			newDisk.DiskDevice = kvapi.DiskDevice{}
+			if disk.DiskDevice.Disk != nil {
+				newDisk.DiskDevice.Disk = &kvapi.DiskTarget{}
+				newDisk.DiskDevice.Disk = disk.DiskDevice.Disk.DeepCopy()
+			} else if disk.DiskDevice.CDRom != nil {
+				newDisk.DiskDevice.CDRom = &kvapi.CDRomTarget{}
+				newDisk.DiskDevice.CDRom = disk.DiskDevice.CDRom.DeepCopy()
+			}
+			if disk.BootOrder != nil {
+				boorOrder := *disk.BootOrder
+				newDisk.BootOrder = &boorOrder
+			}
+
+			match := false
+			for i, kvvm_disk := range kvvmSpec.Template.Spec.Domain.Devices.Disks {
+				if kvvm_disk.Name == disk.Name {
+					// replace disk
+					kvvmSpec.Template.Spec.Domain.Devices.Disks[i] = newDisk
+					match = true
+					break
+				}
+			}
+
+			if !match {
+				kvvmSpec.Template.Spec.Domain.Devices.Disks = append(kvvmSpec.Template.Spec.Domain.Devices.Disks, newDisk)
+			}
+		}
+	}
+
+	if virtzSpec.Hardware.Domain.Devices.Inputs != nil {
+		kvvmSpec.Template.Spec.Domain.Devices.Inputs = make([]kvapi.Input, len(virtzSpec.Hardware.Domain.Devices.Inputs))
+		for i, input := range virtzSpec.Hardware.Domain.Devices.Inputs {
+			kvvmSpec.Template.Spec.Domain.Devices.Inputs[i] = kvapi.Input{
+				Type: input.Type,
+				Bus:  input.Bus,
+				Name: input.Name,
 			}
 		}
 	}
@@ -565,7 +630,6 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 				NetworkSource: networkSource,
 			}
 		}
-
 	}
 
 	if virtzSpec.DiskVolumes != nil {
@@ -573,19 +637,27 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 			// check boot order from spec.diskvolumeTemplates label
 			bootorder := uint(0)
 			isMappingTodiskVolumeTemplate := false
-			isSystemDisk := false
+			diskMediaType := "disk"
+			isHotpluggable := false
+
 			for _, diskVolumeTemplate := range virtzSpec.DiskVolumeTemplates {
 				if diskVolumeTemplate.Name == volume {
 					isMappingTodiskVolumeTemplate = true
 
 					if diskVolumeTemplate.Labels != nil {
-						if diskVolumeTemplate.Labels[virtzv1alpha1.VirtualizationBootOrder] == "1" {
-							bootorder = uint(1)
+						val, ok := diskVolumeTemplate.Labels[virtzv1alpha1.VirtualizationBootOrder]
+						if ok {
+							uint64, _ := strconv.ParseUint(val, 10, 32)
+							bootorder = uint(uint64)
 						}
-					}
-
-					if diskVolumeTemplate.Labels[virtzv1alpha1.VirtualizationDiskType] == "system" {
-						isSystemDisk = true
+						val, ok = diskVolumeTemplate.Labels[virtzv1alpha1.VirtualizationDiskMediaType]
+						if ok {
+							diskMediaType = val
+						}
+						val, ok = diskVolumeTemplate.Labels[virtzv1alpha1.VirtualizationDiskHotpluggable]
+						if ok {
+							isHotpluggable, _ = strconv.ParseBool(val)
+						}
 					}
 				}
 			}
@@ -600,21 +672,27 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 					},
 				}
 
-				if isSystemDisk {
+				// system disk and cdrom disk is not hotpluggable
+				if !isHotpluggable {
 					newVolume.VolumeSource.PersistentVolumeClaim.ClaimName = pvcCreateByDiskVolumeTemplatePrefix + volume
 					kvvmSpec.Template.Spec.Volumes = append(kvvmSpec.Template.Spec.Volumes, newVolume)
 
-					newDisk := kvapi.Disk{
-						Name: volume,
-						DiskDevice: kvapi.DiskDevice{
+					newDisk := kvapi.Disk{}
+					newDisk.Name = volume
+					newDisk.BootOrder = &bootorder
+
+					if diskMediaType == "cdrom" {
+						newDisk.DiskDevice = kvapi.DiskDevice{
+							CDRom: &kvapi.CDRomTarget{
+								Bus: "sata",
+							},
+						}
+					} else {
+						newDisk.DiskDevice = kvapi.DiskDevice{
 							Disk: &kvapi.DiskTarget{
 								Bus: "virtio",
 							},
-						},
-					}
-
-					if bootorder == 1 {
-						newDisk.BootOrder = &bootorder
+						}
 					}
 
 					kvvmSpec.Template.Spec.Domain.Devices.Disks = append(kvvmSpec.Template.Spec.Domain.Devices.Disks, newDisk)
@@ -625,10 +703,10 @@ func applyVirtualMachineSpec(kvvmSpec *kvapi.VirtualMachineSpec, virtzSpec virtz
 
 }
 
-func getInterfaceMethod(iface virtzv1alpha1.Interface) kvapi.InterfaceBindingMethod {
+func getInterfaceMethod(iface kvapi.Interface) kvapi.InterfaceBindingMethod {
 	interfaceMethod := kvapi.InterfaceBindingMethod{}
 
-	klog.Info("test")
+	klog.V(2).Infof("Interface %s", iface.Name)
 	if iface.Bridge != nil {
 		interfaceMethod.Bridge = &kvapi.InterfaceBridge{}
 	} else if iface.Macvtap != nil {

@@ -57,6 +57,10 @@ func (h *virtzhandler) CreateVirtualMahcine(req *restful.Request, resp *restful.
 		return
 	}
 
+	if !isValidDiskDuplicated(ui_vm.Disk, resp) {
+		return
+	}
+
 	createdVM, err := h.virtz.CreateVirtualMachine(namespace, &ui_vm)
 	if err != nil {
 		resp.WriteError(http.StatusInternalServerError, err)
@@ -82,6 +86,34 @@ func (h *virtzhandler) UpdateVirtualMahcine(req *restful.Request, resp *restful.
 
 	if !isValidModifyVirtualMachine(ui_vm, resp) {
 		return
+	}
+
+	if !isValidDiskDuplicated(ui_vm.Disk, resp) {
+		return
+	}
+
+	// unmount the ro mode disk is forbidden
+	if ui_vm.Disk != nil {
+		for _, disk := range ui_vm.Disk {
+			// check if the disk is mounted
+			if disk.Action == "unmount" {
+				diskvolume, err := h.virtz.GetDisk(namespace, disk.ID)
+				if err != nil {
+					klog.Error(err)
+					if errors.IsNotFound(err) {
+						resp.WriteError(http.StatusNotFound, err)
+						return
+					}
+					resp.WriteError(http.StatusInternalServerError, err)
+					return
+				}
+
+				if diskvolume.Labels[virtzv1alpha1.VirtualizationDiskMode] == "ro" {
+					resp.WriteError(http.StatusInternalServerError, errors.NewBadRequest("disk is mounted in ro mode"))
+					return
+				}
+			}
+		}
 	}
 
 	_, err = h.virtz.UpdateVirtualMachine(namespace, vmName, &ui_vm)
@@ -213,13 +245,15 @@ func getUIDiskResponse(diskvolume *virtzv1alpha1.DiskVolume) ui_virtz.DiskRespon
 
 	size, _ := strconv.ParseUint(strings.Replace(diskvolume.Spec.Resources.Requests.Storage().String(), "Gi", "", -1), 10, 32)
 	return ui_virtz.DiskResponse{
-		Name:        diskvolume.Annotations[virtzv1alpha1.VirtualizationAliasName],
-		ID:          diskvolume.Name,
-		Namespace:   diskvolume.Namespace,
-		Description: diskvolume.Annotations[virtzv1alpha1.VirtualizationDescription],
-		Type:        diskvolume.Labels[virtzv1alpha1.VirtualizationDiskType],
-		Size:        uint(size),
-		Status:      ui_disk_status,
+		Name:           diskvolume.Annotations[virtzv1alpha1.VirtualizationAliasName],
+		ID:             diskvolume.Name,
+		Namespace:      diskvolume.Namespace,
+		Description:    diskvolume.Annotations[virtzv1alpha1.VirtualizationDescription],
+		Type:           diskvolume.Labels[virtzv1alpha1.VirtualizationDiskType],
+		Size:           uint(size),
+		Mode:           diskvolume.Labels[virtzv1alpha1.VirtualizationDiskMode],
+		MinioImageName: diskvolume.Labels[virtzv1alpha1.VirtualizationDiskMinioImageName],
+		Status:         ui_disk_status,
 	}
 }
 
@@ -546,8 +580,9 @@ func getUIImageResponse(image *virtzv1alpha1.ImageTemplate) ui_virtz.ImageRespon
 		Memory:         uint(memory),
 		Size:           uint(size),
 		Description:    image.Annotations[virtzv1alpha1.VirtualizationDescription],
-		MinioImageName: image.Labels[virtzv1alpha1.VirtualizationUploadFileName],
+		MinioImageName: image.Labels[virtzv1alpha1.VirtualizationDiskMinioImageName],
 		Shared:         image.Spec.Attributes.Public,
+		Type:           image.Labels[virtzv1alpha1.VirtualizationImageType],
 		Status:         status,
 	}
 }

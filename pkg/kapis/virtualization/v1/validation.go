@@ -214,6 +214,14 @@ func isValidImageRequest(image ui_virtz.ImageRequest, resp *restful.Response) bo
 		return false
 	}
 
+	if !isValidOSFamily(image.OSFamily, resp) {
+		return false
+	}
+
+	if !isValidImageType(image.Type, resp) {
+		return false
+	}
+
 	return true
 }
 
@@ -303,4 +311,63 @@ func isValidDiskSize(h *virtzhandler, namespace string, diskName string, newDisk
 		return false
 	}
 	return true
+}
+
+func isValidImageType(imageType string, resp *restful.Response) bool {
+	if imageType != "cloud" && imageType != "iso" {
+		resp.WriteHeaderAndEntity(http.StatusForbidden, BadRequestError{
+			Reason: "Image type should be 'cloud' or 'iso'",
+		})
+		return false
+	}
+	return true
+}
+
+func isValidOSFamily(osFamily string, resp *restful.Response) bool {
+	osFamilyList := []string{"CentOS", "Debian", "Ubuntu", "Fedora", "Windows"}
+
+	lowerCaseOSFamily := strings.ToLower(osFamily)
+	for _, family := range osFamilyList {
+		if lowerCaseOSFamily == strings.ToLower(family) {
+			return true
+		}
+	}
+
+	resp.WriteHeaderAndEntity(http.StatusForbidden, BadRequestError{
+		Reason: "OS family should be one of the following: centos, debian, ubuntu, fedora, windows",
+	})
+
+	return false
+}
+
+func isValidDiskDuplicated(diskSpecList interface{}, resp *restful.Response) bool {
+	switch disks := diskSpecList.(type) {
+	case []ui_virtz.DiskSpec:
+		diskMap := make(map[string]bool)
+		for _, disk := range disks {
+			if _, ok := diskMap[disk.ID]; ok {
+				resp.WriteHeaderAndEntity(http.StatusForbidden, BadRequestError{
+					Reason: "Disk ID should be unique",
+				})
+				return false
+			}
+			diskMap[disk.ID] = true
+		}
+		return true
+	case []ui_virtz.ModifyDiskSpec:
+		diskMap := make(map[string]bool)
+		for _, disk := range disks {
+			if _, ok := diskMap[disk.ID]; ok {
+				resp.WriteHeaderAndEntity(http.StatusForbidden, BadRequestError{
+					Reason: "Disk ID should be unique",
+				})
+				return false
+			}
+			diskMap[disk.ID] = true
+		}
+		return true
+	default:
+		return false
+	}
+
 }
