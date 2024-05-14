@@ -32,6 +32,7 @@ import (
 
 	"kubesphere.io/kubesphere/cmd/controller-manager/app/options"
 	"kubesphere.io/kubesphere/pkg/controller/application"
+	"kubesphere.io/kubesphere/pkg/controller/even"
 	"kubesphere.io/kubesphere/pkg/controller/helm"
 	"kubesphere.io/kubesphere/pkg/controller/namespace"
 	"kubesphere.io/kubesphere/pkg/controller/openpitrix/helmapplication"
@@ -126,6 +127,7 @@ var allControllers = []string{
 	"virtualmachine",
 	"diskvolume",
 	"imagetemplate",
+	"even",
 }
 
 // setup all available controllers one by one
@@ -563,6 +565,12 @@ func addAllControllers(mgr manager.Manager, client k8s.Client, informerFactory i
 	if cmOptions.IsControllerEnabled("imagetemplate") {
 		imageTemplateReconciler := &imagetemplate.Reconciler{}
 		addControllerWithSetup(mgr, "imagetemplate", imageTemplateReconciler)
+	}
+
+	// "even" controller
+	if cmOptions.IsControllerEnabled("even") {
+		evenReconciler := &even.Reconciler{}
+		addControllerWithSetup(mgr, "even", evenReconciler)
 	}
 
 	// log all controllers process result

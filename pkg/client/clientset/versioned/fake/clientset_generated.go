@@ -35,6 +35,8 @@ import (
 	fakedevopsv1alpha1 "kubesphere.io/kubesphere/pkg/client/clientset/versioned/typed/devops/v1alpha1/fake"
 	devopsv1alpha3 "kubesphere.io/kubesphere/pkg/client/clientset/versioned/typed/devops/v1alpha3"
 	fakedevopsv1alpha3 "kubesphere.io/kubesphere/pkg/client/clientset/versioned/typed/devops/v1alpha3/fake"
+	evenv1alpha1 "kubesphere.io/kubesphere/pkg/client/clientset/versioned/typed/even/v1alpha1"
+	fakeevenv1alpha1 "kubesphere.io/kubesphere/pkg/client/clientset/versioned/typed/even/v1alpha1/fake"
 	iamv1alpha2 "kubesphere.io/kubesphere/pkg/client/clientset/versioned/typed/iam/v1alpha2"
 	fakeiamv1alpha2 "kubesphere.io/kubesphere/pkg/client/clientset/versioned/typed/iam/v1alpha2/fake"
 	networkv1alpha1 "kubesphere.io/kubesphere/pkg/client/clientset/versioned/typed/network/v1alpha1"
@@ -129,6 +131,11 @@ func (c *Clientset) DevopsV1alpha1() devopsv1alpha1.DevopsV1alpha1Interface {
 // DevopsV1alpha3 retrieves the DevopsV1alpha3Client
 func (c *Clientset) DevopsV1alpha3() devopsv1alpha3.DevopsV1alpha3Interface {
 	return &fakedevopsv1alpha3.FakeDevopsV1alpha3{Fake: &c.Fake}
+}
+
+// EvenV1alpha1 retrieves the EvenV1alpha1Client
+func (c *Clientset) EvenV1alpha1() evenv1alpha1.EvenV1alpha1Interface {
+	return &fakeevenv1alpha1.FakeEvenV1alpha1{Fake: &c.Fake}
 }
 
 // IamV1alpha2 retrieves the IamV1alpha2Client

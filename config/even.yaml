@@ -1,0 +1,10 @@
+
+apiVersion: even.ecpaas.io/v1alpha1
+kind: Even
+metadata:
+  name: even-test
+spec:
+  deploymentname: "test"
+  replicas: 2
+  
+
